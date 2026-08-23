@@ -34,6 +34,7 @@ import {
   getTemperatureHeatmap,
   calculateRouteThermalMetrics,
   getCoolerRerouteData,
+  getRouteForecast,
   type FortyGuardHeatmapResult,
   type TemperatureTile,
 } from "@/lib/fortyguard";
@@ -295,6 +296,32 @@ function HeatRouteApp() {
                 },
               };
             });
+            // Save the analyzed route for Heat Intelligence page
+            if (dirRes.routes[0]?.coordinates) {
+              try {
+                const routePayload = {
+                  destination: destination || query || "Searched Walk",
+                  origin: originLabel || originQuery || "Start Location",
+                  coordinates: dirRes.routes[0].coordinates,
+                  durationMin: Math.round((dirRes.routes[0].durationSeconds ?? 1200) / 60),
+                  distanceKm: Number(((dirRes.routes[0].distanceMeters ?? 1500) / 1000).toFixed(1)),
+                };
+                sessionStorage.setItem("heatroute_last_analyzed", JSON.stringify(routePayload));
+
+                // Pre-warm forecast in the background
+                getRouteForecast({
+                  data: {
+                    routeCoordinates: dirRes.routes[0].coordinates,
+                    durationMin: routePayload.durationMin,
+                  },
+                }).then((res) => {
+                  try {
+                    sessionStorage.setItem("heatroute_prewarmed_forecast", JSON.stringify(res));
+                  } catch {}
+                }).catch((e) => console.warn("[Forecast Pre-warm] Background fetch notice:", e));
+              } catch {}
+            }
+
             // Stage 5: re-run selection after every metric refresh
             return applyRecommendation(scored);
           });
@@ -626,17 +653,19 @@ function TopBar({
   thermalSource?: string | null | undefined;
 }) {
   return (
-    <header className="absolute inset-x-0 top-0 z-30 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 p-4 md:p-6 md:pr-[452px]">
-      <Link to="/" className="flex min-w-0 items-center gap-2.5">
+    <header className="absolute inset-x-0 top-0 z-30 flex items-center justify-between gap-3 p-3.5 sm:p-4 md:p-6 md:pr-[452px] pointer-events-none">
+      {/* Brand logo & name — pointer-events-auto ensures clickability */}
+      <Link to="/" className="pointer-events-auto flex items-center gap-2 rounded-full p-1 -ml-1 transition-opacity hover:opacity-90">
         <span
           className="grid h-8 w-8 shrink-0 place-items-center rounded-full shadow-ember-glow"
           style={{ background: "var(--gradient-heat-cta)" }}
         >
           <Flame className="h-4 w-4 text-primary-foreground" />
         </span>
-        <span className="truncate font-display text-base font-bold tracking-tight">HeatRoute</span>
+        <span className="font-display text-base font-bold tracking-tight text-foreground">HeatRoute</span>
       </Link>
-      <div className="flex shrink-0 items-center gap-2">
+
+      <div className="pointer-events-auto flex items-center gap-2">
         {routingSource ? (
           <span
             className="glass-panel hidden items-center gap-1.5 rounded-full px-3 py-1.5 font-mono text-[11px] text-muted-foreground sm:flex"
@@ -677,15 +706,19 @@ function TopBar({
           </span>
         ) : null}
 
-        <div className="glass-panel flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold">
+        <div className="glass-panel flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs font-semibold sm:px-3">
           <Thermometer className="h-3.5 w-3.5 text-primary" />
           <span className="font-mono">{temp}°C</span>
         </div>
+
+        {/* Heat Intelligence button: Icon-only on mobile, full pill on desktop */}
         <Link
           to="/heat-intelligence"
-          className="glass-panel hidden items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors hover:text-primary hover:border-border/80 sm:flex"
+          title="Heat Intelligence 12-hour outlook"
+          className="glass-panel flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs font-medium transition-colors hover:text-primary hover:border-border/80 sm:px-3"
         >
-          <Layers className="h-3.5 w-3.5" /> Heat Intelligence
+          <Layers className="h-3.5 w-3.5 text-primary" />
+          <span className="hidden sm:inline">Heat Intelligence</span>
         </Link>
       </div>
     </header>

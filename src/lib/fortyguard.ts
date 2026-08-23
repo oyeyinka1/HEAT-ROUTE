@@ -518,16 +518,16 @@ export const getRouteForecast = createServerFn({ method: "POST" })
     ];
 
     const aoi = buildCombinedBoundingPolygon([routeCoords]);
-    const computedSlots: ForecastSlot[] = [];
-    let nowTiles: TemperatureTile[] = [];
+    const bboxKey = `${aoi.coordinates[0]?.[0]?.[0]?.toFixed(3)}_${aoi.coordinates[0]?.[0]?.[1]?.toFixed(3)}`;
 
-    for (const def of slotDefinitions) {
-      const cacheKey = `${def.date}_${def.time.replace(":", "")}`;
+    // Fetch all 5 time offsets concurrently in parallel instead of sequentially
+    const slotPromises = slotDefinitions.map(async (def): Promise<{ slot: ForecastSlot; tiles?: TemperatureTile[] }> => {
+      const cacheKey = `${bboxKey}_${def.date}_${def.time.replace(":", "")}`;
       let tiles: TemperatureTile[] | null = getSlotCache(cacheKey);
 
       if (!tiles && apiKey) {
         try {
-          console.info(`[FortyGuard Forecast] Submitting task for slot ${def.label} (${def.date} ${def.time})...`);
+          console.info(`[FortyGuard Forecast] Submitting parallel task for slot ${def.label} (${def.date} ${def.time})...`);
           const https = await import("node:https");
           const payload = JSON.stringify({
             polygon_aoi: aoi,
@@ -578,7 +578,7 @@ export const getRouteForecast = createServerFn({ method: "POST" })
             req.end();
           });
 
-          const completed = await pollFortyGuardStatus(apiKey, actId, 60000, 4000);
+          const completed = await pollFortyGuardStatus(apiKey, actId, 50000, 3000);
           const rawFeatures = completed.result?.map_data?.features || [];
 
           if (rawFeatures.length > 0) {
@@ -608,29 +608,35 @@ export const getRouteForecast = createServerFn({ method: "POST" })
       }
 
       if (tiles && tiles.length > 0) {
-        if (def.offsetHours === 0 || nowTiles.length === 0) {
-          nowTiles = tiles;
-        }
         const thermal = calculateRouteThermalMetrics(routeCoords, duration, tiles);
-        computedSlots.push({
-          label: `${def.label} (${def.displayTime})`,
-          offsetHours: def.offsetHours,
-          timeString: def.time,
-          available: true,
-          peakTempC: thermal.peakTempC,
-          avgTempC: thermal.avgTempC,
-          highHeatMinutes: thermal.highHeatMinutes,
-        });
-      } else {
-        computedSlots.push({
+        return {
+          slot: {
+            label: `${def.label} (${def.displayTime})`,
+            offsetHours: def.offsetHours,
+            timeString: def.time,
+            available: true,
+            peakTempC: thermal.peakTempC,
+            avgTempC: thermal.avgTempC,
+            highHeatMinutes: thermal.highHeatMinutes,
+          },
+          tiles,
+        };
+      }
+
+      return {
+        slot: {
           label: `${def.label} (${def.displayTime})`,
           offsetHours: def.offsetHours,
           timeString: def.time,
           available: false,
           statusNotice: "Forecast unavailable",
-        });
-      }
-    }
+        },
+      };
+    });
+
+    const slotResults = await Promise.all(slotPromises);
+    const computedSlots = slotResults.map((r) => r.slot);
+    const nowTiles = slotResults.find((r) => r.tiles && r.tiles.length > 0)?.tiles || [];
 
     const availableSlots = computedSlots.filter((s) => s.available && s.peakTempC !== undefined);
     let coolestSlot: ForecastSlot | undefined;

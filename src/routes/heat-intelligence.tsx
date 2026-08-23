@@ -1,11 +1,22 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState, useMemo } from "react";
-import { ArrowLeft, ArrowRight, Clock, Flame, Sun, Thermometer, Wind, AlertCircle, Layers } from "lucide-react";
+import { useState, useMemo, useEffect } from "react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Clock,
+  Flame,
+  Sun,
+  Thermometer,
+  Wind,
+  AlertCircle,
+  Layers,
+  Loader2,
+  MapPin,
+  Compass,
+} from "lucide-react";
 import { ThermalMap, ThermalLegend } from "@/components/heatroute/ThermalMap";
 import {
-  currentConditions,
   highHeatThresholdC,
-  fastestGeometryCoords,
   type RouteOption,
 } from "@/lib/heatroute-data";
 import { getRouteForecast, type RouteForecastResult } from "@/lib/fortyguard";
@@ -27,59 +38,123 @@ export const Route = createFileRoute("/heat-intelligence")({
     ],
   }),
   loader: async () => {
-    try {
-      const forecastData = await getRouteForecast({
-        data: {
-          routeCoordinates: fastestGeometryCoords,
-          durationMin: 20,
-        },
-      });
-      return { forecastData };
-    } catch (err) {
-      console.warn("Forecast loader error:", err);
-      return { forecastData: null };
-    }
+    return {};
   },
   component: HeatIntelligence,
 });
 
+interface AnalyzedRouteContext {
+  destination: string;
+  origin: string;
+  coordinates: [number, number][];
+  durationMin: number;
+  distanceKm: number;
+}
+
 function HeatIntelligence() {
-  const loaderData = Route.useLoaderData();
-  const forecastResult: RouteForecastResult | null = loaderData?.forecastData;
+  const [routeContext, setRouteContext] = useState<AnalyzedRouteContext | null>(null);
+  const [forecastResult, setForecastResult] = useState<RouteForecastResult | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [selected, setSelected] = useState<number>(0);
+
+  useEffect(() => {
+    let active = true;
+
+    // 1. Read last analyzed route context from session storage
+    let savedContext: AnalyzedRouteContext | null = null;
+    try {
+      const raw = sessionStorage.getItem("heatroute_last_analyzed");
+      if (raw) {
+        savedContext = JSON.parse(raw);
+        setRouteContext(savedContext);
+      }
+    } catch {}
+
+    if (!savedContext || !savedContext.coordinates || savedContext.coordinates.length === 0) {
+      setLoading(false);
+      return;
+    }
+
+    // 2. Check if pre-warmed forecast exists
+    try {
+      const prewarmed = sessionStorage.getItem("heatroute_prewarmed_forecast");
+      if (prewarmed) {
+        const parsed = JSON.parse(prewarmed);
+        if (parsed?.slots && parsed.slots.length > 0) {
+          setForecastResult(parsed);
+          setLoading(false);
+          return;
+        }
+      }
+    } catch {}
+
+    // 3. If not pre-warmed, fetch real forecast for this route
+    setLoading(true);
+    getRouteForecast({
+      data: {
+        routeCoordinates: savedContext.coordinates,
+        durationMin: savedContext.durationMin || 20,
+      },
+    })
+      .then((res) => {
+        if (active) {
+          setForecastResult(res);
+          try {
+            sessionStorage.setItem("heatroute_prewarmed_forecast", JSON.stringify(res));
+          } catch {}
+        }
+      })
+      .catch((err) => {
+        console.warn("[Heat Intelligence] Fetch forecast error:", err);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const slots = forecastResult?.slots || [];
   const tiles = forecastResult?.tiles || [];
-  const [selected, setSelected] = useState(0);
 
   const availableSlots = slots.filter((s) => s.available && s.peakTempC !== undefined);
   const nowSlot = slots.find((s) => s.offsetHours === 0) || slots[0];
-  const coolestSlot = forecastResult?.coolestSlot || (availableSlots.length > 0
-    ? [...availableSlots].sort((a, b) => (a.peakTempC! - b.peakTempC!))[0]
-    : undefined);
+  const coolestSlot =
+    forecastResult?.coolestSlot ||
+    (availableSlots.length > 0
+      ? [...availableSlots].sort((a, b) => a.peakTempC! - b.peakTempC!)[0]
+      : undefined);
 
-  const currentTemp = nowSlot?.peakTempC ?? currentConditions.tempC;
-  const currentHighHeat = nowSlot?.highHeatMinutes ?? 11;
+  const currentTemp = nowSlot?.peakTempC ?? 28.0;
+  const currentHighHeat = nowSlot?.highHeatMinutes ?? 0;
 
   const activePoint = slots[selected] || slots[0];
-  const maxTemp = availableSlots.length > 0 ? Math.max(...availableSlots.map((f) => f.peakTempC!)) : 40;
-  const minTemp = availableSlots.length > 0 ? Math.min(...availableSlots.map((f) => f.peakTempC!)) : 34;
+  const maxTemp =
+    availableSlots.length > 0 ? Math.max(...availableSlots.map((f) => f.peakTempC!)) : 38;
+  const minTemp =
+    availableSlots.length > 0 ? Math.min(...availableSlots.map((f) => f.peakTempC!)) : 22;
 
-  const previewRoute = useMemo<RouteOption[]>(() => [
-    {
-      id: "preview-route",
-      kind: "heat-safe",
-      label: "Central Phoenix Walking Corridor",
-      geometry: fastestGeometryCoords,
-      recommended: true,
-      metrics: {
-        durationMin: 20,
-        distanceKm: 1.4,
-        peakTempC: currentTemp,
-        avgTempC: nowSlot?.avgTempC ?? currentTemp,
-        highHeatMinutes: currentHighHeat,
+  const previewRoute = useMemo<RouteOption[]>(() => {
+    if (!routeContext) return [];
+    return [
+      {
+        id: "preview-route",
+        kind: "heat-safe",
+        label: `${routeContext.origin} → ${routeContext.destination}`,
+        geometry: routeContext.coordinates,
+        recommended: true,
+        metrics: {
+          durationMin: routeContext.durationMin,
+          distanceKm: routeContext.distanceKm,
+          peakTempC: currentTemp,
+          avgTempC: nowSlot?.avgTempC ?? currentTemp,
+          highHeatMinutes: currentHighHeat,
+        },
       },
-    },
-  ], [currentTemp, currentHighHeat, nowSlot]);
+    ];
+  }, [routeContext, currentTemp, currentHighHeat, nowSlot]);
 
   return (
     <main className="min-h-screen bg-atmosphere-subtle text-foreground">
@@ -90,7 +165,9 @@ function HeatIntelligence() {
           </Link>
           <div className="min-w-0">
             <h1 className="truncate font-display text-base font-bold tracking-tight">Heat Intelligence</h1>
-            <p className="truncate text-xs text-muted-foreground">{currentConditions.city}</p>
+            <p className="truncate text-xs text-muted-foreground">
+              {routeContext ? `${routeContext.origin} → ${routeContext.destination}` : "12-Hour Heat Outlook"}
+            </p>
           </div>
           <span
             className="grid h-8 w-8 shrink-0 place-items-center rounded-full shadow-ember-glow"
@@ -102,64 +179,107 @@ function HeatIntelligence() {
       </header>
 
       <div className="mx-auto max-w-4xl space-y-6 px-5 py-6 pb-16">
-        <section className="glass-panel overflow-hidden rounded-3xl">
-          <div className="relative h-64 sm:h-80 w-full">
-            <ThermalMap
-              routes={previewRoute}
-              activeRouteId="preview-route"
-              tiles={tiles}
-              className="absolute inset-0 h-full w-full"
-              fitBoundsPaddingRight={60}
-            />
-            <div
-              className="pointer-events-none absolute inset-0"
-              style={{ background: "linear-gradient(180deg, transparent 40%, var(--card) 100%)" }}
-            />
-            <div className="pointer-events-none absolute top-4 left-4 z-10">
-              <ThermalLegend />
+        {/* State 1: No route analyzed yet */}
+        {!loading && !routeContext ? (
+          <section className="glass-panel rounded-3xl p-8 text-center sm:p-12">
+            <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-secondary/80 text-primary">
+              <Compass className="h-7 w-7" />
             </div>
-            <div className="absolute inset-x-5 bottom-4 z-10 grid grid-cols-[minmax(0,1fr)_auto] items-end gap-3">
-              <div className="min-w-0">
-                <div className="flex items-center gap-1.5 mb-1">
-                  <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                  <p className="label-xs text-foreground/90">Live Thermal Map · FortyGuard 2m</p>
-                </div>
-                <p className="font-display text-4xl font-bold">
-                  {currentTemp.toFixed(1)}°C
-                </p>
-                <p className="truncate text-xs text-muted-foreground">
-                  Phoenix Central Corridor · {tiles.length > 0 ? `${tiles.length} heat tiles loaded` : "FortyGuard Real Grid"}
-                </p>
-              </div>
-              <span
-                className="shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold"
-                style={{
-                  background: "color-mix(in oklab, var(--hot) 18%, transparent)",
-                  color: "var(--hot)",
-                }}
+            <h2 className="mt-4 font-display text-2xl font-bold">No walk analyzed yet</h2>
+            <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground leading-relaxed">
+              Search a starting point and destination on the map first. Heat Intelligence will analyze
+              the live street-level temperature grid and 12-hour departure forecast for your route.
+            </p>
+            <div className="mt-6 flex justify-center">
+              <Link
+                to="/app"
+                className="flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-semibold text-primary-foreground shadow-lg transition-transform hover:scale-[1.02]"
+                style={{ background: "var(--gradient-heat-cta)" }}
               >
-                Above {highHeatThresholdC}°C in exposed areas
-              </span>
+                Plan a walk on the map <ArrowRight className="h-4 w-4" />
+              </Link>
             </div>
-          </div>
-          <div className="grid grid-cols-3 divide-x divide-border border-t border-border">
-            <Stat
-              icon={<Thermometer className="h-3.5 w-3.5" />}
-              value={`${(currentTemp + 2.5).toFixed(1)}°C`}
-              label="Feels like"
-            />
-            <Stat
-              icon={<Sun className="h-3.5 w-3.5" />}
-              value={`−${currentConditions.shadeDeltaC.toFixed(1)}°C`}
-              label="Shade delta"
-            />
-            <Stat
-              icon={<Wind className="h-3.5 w-3.5" />}
-              value={`${highHeatThresholdC}°C`}
-              label="High-heat threshold"
-            />
-          </div>
-        </section>
+          </section>
+        ) : loading ? (
+          /* State 2: Loading live forecast */
+          <section className="glass-panel rounded-3xl p-12 text-center">
+            <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+            <h2 className="mt-4 font-display text-lg font-bold">Loading Heat Intelligence</h2>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Reading FortyGuard 2m thermal resolution grid and 12-hour outlook...
+            </p>
+          </section>
+        ) : (
+          /* State 3: Real dynamic route intelligence */
+          <>
+            <section className="glass-panel overflow-hidden rounded-3xl">
+              <div className="relative h-64 sm:h-80 w-full">
+                {previewRoute.length > 0 ? (
+                  <ThermalMap
+                    routes={previewRoute}
+                    activeRouteId="preview-route"
+                    tiles={tiles}
+                    className="absolute inset-0 h-full w-full"
+                    fitBoundsPaddingRight={60}
+                  />
+                ) : (
+                  <div className="grid h-full w-full place-items-center bg-secondary/30 text-sm text-muted-foreground">
+                    Map preview unavailable
+                  </div>
+                )}
+                <div
+                  className="pointer-events-none absolute inset-0"
+                  style={{ background: "linear-gradient(180deg, transparent 40%, var(--card) 100%)" }}
+                />
+                <div className="pointer-events-none absolute top-4 left-4 z-10">
+                  <ThermalLegend />
+                </div>
+                <div className="absolute inset-x-5 bottom-4 z-10 grid grid-cols-[minmax(0,1fr)_auto] items-end gap-3">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                      <p className="label-xs text-foreground/90">Live Thermal Map · FortyGuard 2m</p>
+                    </div>
+                    <p className="font-display text-4xl font-bold">
+                      {currentTemp.toFixed(1)}°C
+                    </p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {routeContext?.destination ?? "Walk Corridor"} · {tiles.length > 0 ? `${tiles.length} heat tiles loaded` : "FortyGuard Real Grid"}
+                    </p>
+                  </div>
+                  <span
+                    className="shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold"
+                    style={{
+                      background: currentTemp >= highHeatThresholdC
+                        ? "color-mix(in oklab, var(--hot) 18%, transparent)"
+                        : "color-mix(in oklab, var(--safe) 18%, transparent)",
+                      color: currentTemp >= highHeatThresholdC ? "var(--hot)" : "var(--safe)",
+                    }}
+                  >
+                    {currentTemp >= highHeatThresholdC
+                      ? `Above ${highHeatThresholdC}°C in exposed areas`
+                      : `Below ${highHeatThresholdC}°C moderate heat`}
+                  </span>
+                </div>
+              </div>
+              <div className="grid grid-cols-3 divide-x divide-border border-t border-border">
+                <Stat
+                  icon={<Thermometer className="h-3.5 w-3.5" />}
+                  value={`${(currentTemp + 1.5).toFixed(1)}°C`}
+                  label="Feels like"
+                />
+                <Stat
+                  icon={<Sun className="h-3.5 w-3.5" />}
+                  value={`−${Math.min(3.5, Math.max(1.2, currentTemp * 0.08)).toFixed(1)}°C`}
+                  label="Shade delta"
+                />
+                <Stat
+                  icon={<Wind className="h-3.5 w-3.5" />}
+                  value={`${highHeatThresholdC}°C`}
+                  label="High-heat threshold"
+                />
+              </div>
+            </section>
 
         {/* 12-hour forecast chart */}
         <section className="glass-panel rounded-3xl p-5">
@@ -289,6 +409,9 @@ function HeatIntelligence() {
             <DepartureUnavailableCard title="Leave later" />
           )}
         </section>
+
+          </>
+        )}
 
         <Link
           to="/app"

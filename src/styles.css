@@ -1,0 +1,286 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+@import "leaflet/dist/leaflet.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * HeatRoute design system — premium dark climate-intelligence aesthetic.
+ * All colors are oklch semantic tokens. Never hardcode colors in components.
+ */
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+
+  --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* Thermal scale + route semantics */
+  --color-cool: var(--cool);
+  --color-mild: var(--mild);
+  --color-warm: var(--warm);
+  --color-hot: var(--hot);
+  --color-scorch: var(--scorch);
+  --color-safe: var(--safe);
+  --color-safe-foreground: var(--safe-foreground);
+  --color-fastest: var(--fastest);
+  --color-balanced: var(--balanced);
+  --color-panel: var(--panel);
+  --color-panel-border: var(--panel-border);
+
+  /* Brand / Atmosphere Layer (Separated from functional data scale) */
+  --color-void: var(--void);
+  --color-ember-deep: var(--ember-deep);
+  --color-ember-core: var(--ember-core);
+  --color-ember-glow: var(--ember-glow);
+}
+
+:root {
+  --radius: 0.875rem;
+
+  /* Brand & Atmosphere tokens */
+  --void: #0B0A0C;
+  --ember-deep: #2A0F0F;
+  --ember-core: #C2410C;
+  --ember-glow: #FF8A3D;
+
+  --background: #0B0A0C;
+  --foreground: oklch(0.97 0.005 250);
+  --card: #151217;
+  --card-foreground: oklch(0.97 0.005 250);
+  --popover: #161318;
+  --popover-foreground: oklch(0.97 0.005 250);
+  --primary: #FF8A3D;
+  --primary-foreground: #0B0A0C;
+  --secondary: #1F1922;
+  --secondary-foreground: oklch(0.96 0.005 250);
+  --muted: #1A151D;
+  --muted-foreground: oklch(0.72 0.02 258);
+  --accent: #2A1717;
+  --accent-foreground: oklch(0.97 0.005 250);
+  --destructive: oklch(0.62 0.21 25);
+  --destructive-foreground: oklch(0.98 0.005 250);
+  --border: rgba(255, 138, 61, 0.12);
+  --input: rgba(255, 255, 255, 0.08);
+  --ring: #FF8A3D;
+
+  /* Real Data / Thermal scale + route semantics (STRICTLY UNCHANGED) */
+  --cool: oklch(0.62 0.15 240);
+  --mild: oklch(0.72 0.14 195);
+  --warm: oklch(0.82 0.15 90);
+  --hot: oklch(0.72 0.18 55);
+  --scorch: oklch(0.62 0.22 22);
+
+  --safe: oklch(0.76 0.17 158);
+  --safe-foreground: oklch(0.17 0.04 160);
+  --fastest: oklch(0.95 0.01 250);
+  --balanced: oklch(0.68 0.15 245);
+  --amber-warning: oklch(0.78 0.18 75);
+
+  /* Subtle atmospheric panel styling */
+  --panel: rgba(18, 14, 20, 0.78);
+  --panel-border: rgba(255, 138, 61, 0.14);
+
+  --gradient-thermal: linear-gradient(
+    90deg,
+    var(--cool) 0%,
+    var(--mild) 28%,
+    var(--warm) 56%,
+    var(--hot) 78%,
+    var(--scorch) 100%
+  );
+  --gradient-heat-cta: linear-gradient(135deg, #FF8A3D 0%, #C2410C 60%, #9A2C05 100%);
+  --shadow-panel: 0 20px 50px -20px rgba(0, 0, 0, 0.9), 0 0 1px 1px rgba(255, 138, 61, 0.08);
+  --shadow-glow-safe:
+    0 0 0 1px oklch(0.76 0.17 158 / 35%), 0 12px 40px -18px oklch(0.76 0.17 158 / 45%);
+  --shadow-ember-glow:
+    0 0 45px -10px rgba(255, 138, 61, 0.35);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    letter-spacing: -0.025em;
+  }
+}
+
+@utility glass-panel {
+  background: var(--panel);
+  backdrop-filter: blur(24px) saturate(150%);
+  border: 1px solid var(--panel-border);
+  box-shadow: var(--shadow-panel);
+}
+
+@utility thermal-bar {
+  background: var(--gradient-thermal);
+}
+
+@utility text-heat-gradient {
+  background: var(--gradient-heat-cta);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@utility label-xs {
+  font-size: 0.6875rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--muted-foreground);
+}
+
+@utility draw-route {
+  stroke-dasharray: 1000;
+  animation: route-draw 1.6s cubic-bezier(0.65, 0, 0.35, 1) forwards;
+}
+
+@keyframes route-draw {
+  from {
+    stroke-dashoffset: 1000;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes sheet-up {
+  from {
+    transform: translateY(14px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@utility animate-sheet-up {
+  animation: sheet-up 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes soft-pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.55);
+  }
+}
+
+@utility animate-soft-pulse {
+  animation: soft-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@utility animate-rise-in {
+  animation: rise-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes ember-breathe {
+  0%, 100% {
+    opacity: 0.65;
+    transform: scale(1) translate3d(0, 0, 0);
+  }
+  50% {
+    opacity: 0.95;
+    transform: scale(1.08) translate3d(0, -6px, 0);
+  }
+}
+
+@utility animate-ember-breathe {
+  animation: ember-breathe 8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-ember-breathe,
+  .animate-soft-pulse,
+  .animate-sheet-up,
+  .animate-rise-in {
+    animation: none !important;
+    transform: none !important;
+    opacity: 1 !important;
+  }
+}
+
+@utility bg-atmosphere-landing {
+  background:
+    radial-gradient(1200px circle at 85% 15%, rgba(255, 138, 61, 0.22) 0%, rgba(194, 65, 12, 0.15) 30%, rgba(42, 15, 15, 0.35) 60%, transparent 80%),
+    radial-gradient(1000px circle at 15% 45%, rgba(42, 15, 15, 0.25) 0%, rgba(194, 65, 12, 0.08) 35%, transparent 65%),
+    radial-gradient(900px circle at 80% 75%, rgba(255, 138, 61, 0.12) 0%, rgba(42, 15, 15, 0.2) 45%, transparent 70%),
+    linear-gradient(180deg, #0B0A0C 0%, #12090C 20%, #1A0D10 40%, #12090C 65%, #0B0A0C 85%, #080709 100%);
+}
+
+@utility bg-atmosphere-hero-overlay {
+  background:
+    linear-gradient(180deg,
+      rgba(11, 10, 12, 0.4) 0%,
+      rgba(42, 15, 15, 0.2) 40%,
+      rgba(11, 10, 12, 0.85) 85%,
+      #0B0A0C 100%
+    );
+}
+
+@utility bg-atmosphere-subtle {
+  background:
+    radial-gradient(800px circle at 80% 10%, rgba(255, 138, 61, 0.07) 0%, transparent 65%),
+    #0B0A0C;
+}

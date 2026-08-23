@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="heatGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ff3b30"/>
+      <stop offset="50%" stop-color="#ff9500"/>
+      <stop offset="100%" stop-color="#ffcc00"/>
+    </linearGradient>
+    <linearGradient id="coolGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00c7be"/>
+      <stop offset="100%" stop-color="#30b0c7"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Dark background rounded tile -->
+  <rect width="64" height="64" rx="16" fill="#141417"/>
+  
+  <!-- Heat shield / Path ribbon -->
+  <path d="M16 46 C 16 32, 28 28, 32 18 C 36 28, 48 32, 48 46 C 48 54, 40 58, 32 58 C 24 58, 16 54, 16 46 Z" fill="url(#heatGrad)"/>
+  
+  <!-- Inner Cool core / Safe walking path -->
+  <path d="M25 46 C 25 38, 30 35, 32 28 C 34 35, 39 38, 39 46 C 39 50, 36 53, 32 53 C 28 53, 25 50, 25 46 Z" fill="#141417"/>
+  <circle cx="32" cy="43" r="3.5" fill="url(#coolGrad)"/>
+</svg>

@@ -3,12 +3,12 @@ import { h as Link } from "../_libs/@tanstack/react-router+[...].mjs";
 import { c as createServerFn } from "./createServerFn-CIHAFgYl.mjs";
 import { f as require_react } from "../_libs/@react-leaflet/core+[...].mjs";
 import { n as require_jsx_runtime } from "../_libs/react+tanstack__react-query.mjs";
-import { t as Route } from "./app-DcFdq7pm.mjs";
-import { i as routeAnalysis, n as navSteps, r as routeAccent, t as analysisStages } from "./heatroute-data-BOhtU1ol.mjs";
+import { t as Route } from "./app-B4Hs2uGh.mjs";
+import { a as routeAnalysis, i as routeAccent, n as fastestGeometryCoords, r as navSteps, t as analysisStages } from "./heatroute-data-ClpyG0yJ.mjs";
 import { a as tupleType, i as stringType, n as numberType, r as objectType } from "../_libs/zod.mjs";
 import { a as getCoolerRerouteData, i as createSsrRpc, n as ThermalMap, o as getRouteForecast, r as calculateRouteThermalMetrics, s as getTemperatureHeatmap, t as ThermalLegend } from "./fortyguard-BUEdrfTf.mjs";
 import { C as Check, S as ChevronRight, T as ArrowLeft, _ as Footprints, a as Thermometer, b as Clock, d as Navigation, g as Layers, h as LoaderCircle, l as Search, m as LocateFixed, p as MapPin, r as TriangleAlert, s as Sparkles, t as X, v as Flame, w as ArrowRight } from "../_libs/lucide-react.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/app-DKnQomju.js
+//#region node_modules/.nitro/vite/services/ssr/assets/app-BKJCSLlT.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 function RouteCard({ route, selected, onSelect, isNearTie = false }) {
@@ -196,15 +196,6 @@ function applyRecommendation(routes) {
 		recommended: r.id === result.recommendedId
 	}));
 }
-var PHOENIX_FALLBACK_BBOX = {
-	lonCenter: -112.074,
-	latCenter: 33.4484,
-	radiusDeg: .15
-};
-/** Returns true if a [lon, lat] coordinate is within the Phoenix Downtown corridor */
-function isNearPhoenixCorridor(coord) {
-	return Math.abs(coord[0] - PHOENIX_FALLBACK_BBOX.lonCenter) < PHOENIX_FALLBACK_BBOX.radiusDeg && Math.abs(coord[1] - PHOENIX_FALLBACK_BBOX.latCenter) < PHOENIX_FALLBACK_BBOX.radiusDeg;
-}
 function HeatRouteApp() {
 	const loaderData = Route.useLoaderData();
 	const [phase, setPhase] = (0, import_react.useState)("search");
@@ -261,6 +252,7 @@ function HeatRouteApp() {
 		};
 	});
 	const [coolerSlotLabel, setCoolerSlotLabel] = (0, import_react.useState)("+6h (8:00 PM)");
+	const [rerouteNotice, setRerouteNotice] = (0, import_react.useState)(null);
 	const [isTriggeringReroute, setIsTriggeringReroute] = (0, import_react.useState)(false);
 	const [routingSource, setRoutingSource] = (0, import_react.useState)(loaderData?.directions?.source ?? null);
 	(0, import_react.useEffect)(() => {
@@ -470,6 +462,7 @@ function HeatRouteApp() {
 	*/
 	async function triggerSimulatedConditionChange() {
 		setIsTriggeringReroute(true);
+		setRerouteNotice(null);
 		try {
 			const activeRoute = selected ?? routes[0];
 			const activeCoords = activeRoute?.geometry || fastestGeometryCoords;
@@ -478,8 +471,11 @@ function HeatRouteApp() {
 				routeCoordinates: activeCoords,
 				durationMin: Math.max(15, (activeRoute?.metrics.durationMin ?? 20) + 1)
 			} });
+			if (!rerouteData.available || rerouteData.cacheSource === "unavailable") {
+				setRerouteNotice(rerouteData.statusNotice || "Condition simulation unavailable for this location right now");
+				return;
+			}
 			console.info("[Demo Reroute] AFTER — Cooler route metrics:", `slot=${rerouteData.slotKey} (${rerouteData.timeSlotLabel}),`, `source=${rerouteData.cacheSource},`, `tileCount=${rerouteData.tileCount},`, `peak=${rerouteData.route.metrics.peakTempC.toFixed(1)}°C,`, `avg=${rerouteData.route.metrics.avgTempC.toFixed(1)}°C,`, `highHeatMin=${rerouteData.route.metrics.highHeatMinutes}min,`, `durationMin=${rerouteData.route.metrics.durationMin}min`);
-			console.info(`[Demo Reroute] ΔPeak: ${(activeRoute?.metrics.peakTempC ?? 0) - rerouteData.route.metrics.peakTempC >= 0 ? "-" : "+"}${Math.abs((activeRoute?.metrics.peakTempC ?? 0) - rerouteData.route.metrics.peakTempC).toFixed(1)}°C |`, `ΔHighHeat: ${(activeRoute?.metrics.highHeatMinutes ?? 0) - rerouteData.route.metrics.highHeatMinutes >= 0 ? "-" : "+"}${Math.abs((activeRoute?.metrics.highHeatMinutes ?? 0) - rerouteData.route.metrics.highHeatMinutes)}min`);
 			const coolerOption = {
 				...activeRoute,
 				id: "r-cooler",
@@ -495,8 +491,8 @@ function HeatRouteApp() {
 			if (rerouteData.tiles && rerouteData.tiles.length > 0) setThermalTiles(rerouteData.tiles);
 			setRerouteState("offered");
 		} catch (err) {
-			console.warn("[Demo Reroute] Using fallback cooler option:", err);
-			setRerouteState("offered");
+			console.warn("[Demo Reroute] Reroute fetch failed:", err);
+			setRerouteNotice("Condition simulation unavailable for this location right now");
 		} finally {
 			setIsTriggeringReroute(false);
 		}
@@ -508,7 +504,6 @@ function HeatRouteApp() {
 	}
 	const mapRoutes = phase === "navigating" || phase === "arrived" ? selected ? [selected] : [] : routes;
 	const progress = phase === "navigating" ? Math.min(.95, stepIndex / Math.max(1, (selected?.steps?.length ?? navSteps.length) - 1)) : phase === "arrived" ? 1 : void 0;
-	const isPhoenixRoute = selected ? isNearPhoenixCorridor(selected.geometry[0] ?? [-999, -999]) : false;
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("main", {
 		className: "relative h-[100dvh] w-full overflow-hidden bg-background",
 		children: [
@@ -521,7 +516,7 @@ function HeatRouteApp() {
 				dim: phase === "analyzing"
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TopBar, {
-				temp: routeAnalysis.currentTempC,
+				temp: selected?.metrics?.peakTempC ?? null,
 				routingSource,
 				thermalSource
 			}),
@@ -597,8 +592,8 @@ function HeatRouteApp() {
 							rerouteState,
 							coolerRouteOption,
 							coolerSlotLabel,
+							rerouteNotice,
 							isTriggeringReroute,
-							isPhoenixRoute,
 							onTriggerReroute: triggerSimulatedConditionChange,
 							onAccept: acceptReroute,
 							onDecline: () => setRerouteState("declined"),
@@ -607,6 +602,7 @@ function HeatRouteApp() {
 							onExit: () => {
 								setPhase("routes");
 								setRerouteState("idle");
+								setRerouteNotice(null);
 							}
 						}) : null,
 						phase === "arrived" && selected ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ArrivedPanel, {
@@ -626,23 +622,23 @@ function HeatRouteApp() {
 }
 function TopBar({ temp, routingSource, thermalSource }) {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("header", {
-		className: "absolute inset-x-0 top-0 z-30 flex items-center justify-between gap-3 p-3.5 sm:p-4 md:p-6 md:pr-[452px] pointer-events-none",
+		className: "absolute inset-x-0 top-0 z-30 flex items-center justify-between gap-3 p-3 sm:p-4 md:p-6 md:pr-[452px] pointer-events-none",
 		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Link, {
 			to: "/",
-			className: "pointer-events-auto flex items-center gap-2 rounded-full p-1 -ml-1 transition-opacity hover:opacity-90",
+			className: "pointer-events-auto flex items-center gap-2 rounded-full border border-border/80 bg-void/95 px-3 py-1.5 shadow-lg backdrop-blur-md transition-opacity hover:opacity-90",
 			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-				className: "grid h-8 w-8 shrink-0 place-items-center rounded-full shadow-ember-glow",
+				className: "grid h-7 w-7 shrink-0 place-items-center rounded-full shadow-ember-glow",
 				style: { background: "var(--gradient-heat-cta)" },
-				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Flame, { className: "h-4 w-4 text-primary-foreground" })
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Flame, { className: "h-3.5 w-3.5 text-primary-foreground" })
 			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-				className: "font-display text-base font-bold tracking-tight text-foreground",
+				className: "font-display text-sm font-bold tracking-tight text-foreground sm:text-base",
 				children: "HeatRoute"
 			})]
 		}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 			className: "pointer-events-auto flex items-center gap-2",
 			children: [
 				routingSource ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-					className: "glass-panel hidden items-center gap-1.5 rounded-full px-3 py-1.5 font-mono text-[11px] text-muted-foreground sm:flex",
+					className: "hidden items-center gap-1.5 rounded-full border border-border/80 bg-void/95 px-3 py-1.5 font-mono text-[11px] text-muted-foreground shadow-lg backdrop-blur-md sm:flex",
 					title: "Routing Engine Tier",
 					children: [
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
@@ -654,7 +650,7 @@ function TopBar({ temp, routingSource, thermalSource }) {
 					]
 				}) : null,
 				thermalSource ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-					className: "glass-panel hidden items-center gap-1.5 rounded-full px-3 py-1.5 font-mono text-[11px] text-muted-foreground sm:flex",
+					className: "hidden items-center gap-1.5 rounded-full border border-border/80 bg-void/95 px-3 py-1.5 font-mono text-[11px] text-muted-foreground shadow-lg backdrop-blur-md sm:flex",
 					title: "Temperature Grid Tier",
 					children: [
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
@@ -665,17 +661,18 @@ function TopBar({ temp, routingSource, thermalSource }) {
 						thermalSource
 					]
 				}) : null,
-				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					className: "glass-panel flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs font-semibold sm:px-3",
+				temp !== void 0 && temp !== null && temp > 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					title: "Peak street-level temperature along selected route",
+					className: "flex items-center gap-1.5 rounded-full border border-border/80 bg-void/95 px-2.5 py-1.5 text-xs font-semibold shadow-lg backdrop-blur-md sm:px-3",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Thermometer, { className: "h-3.5 w-3.5 text-primary" }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
 						className: "font-mono",
-						children: [temp, "°C"]
+						children: [temp.toFixed(1), "°C"]
 					})]
-				}),
+				}) : null,
 				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Link, {
 					to: "/heat-intelligence",
 					title: "Heat Intelligence 12-hour outlook",
-					className: "glass-panel flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs font-medium transition-colors hover:text-primary hover:border-border/80 sm:px-3",
+					className: "flex items-center gap-1.5 rounded-full border border-border/80 bg-void/95 px-2.5 py-1.5 text-xs font-medium shadow-lg backdrop-blur-md transition-colors hover:border-primary/60 hover:text-primary sm:px-3",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Layers, { className: "h-3.5 w-3.5 text-primary" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
 						className: "hidden sm:inline",
 						children: "Heat Intelligence"
@@ -1270,7 +1267,7 @@ function Fact({ term, detail }) {
 		children: detail
 	})] });
 }
-function NavigationPanel({ route, stepIndex, rerouteState, coolerRouteOption, coolerSlotLabel, isTriggeringReroute, isPhoenixRoute = false, onTriggerReroute, onNext, onArrive, onAccept, onDecline, onExit }) {
+function NavigationPanel({ route, stepIndex, rerouteState, coolerRouteOption, coolerSlotLabel, rerouteNotice, isTriggeringReroute, onTriggerReroute, onNext, onArrive, onAccept, onDecline, onExit }) {
 	const activeSteps = route.steps && route.steps.length > 0 ? route.steps : navSteps;
 	const totalSteps = activeSteps.length;
 	const isLastStep = stepIndex >= totalSteps - 1;
@@ -1400,7 +1397,7 @@ function NavigationPanel({ route, stepIndex, rerouteState, coolerRouteOption, co
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(X, { className: "h-4 w-4" })
 				})]
 			}),
-			isPhoenixRoute ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 				className: "mt-3 flex items-center justify-between rounded-xl border border-dashed border-amber-500/50 bg-amber-500/10 p-2.5",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 					className: "min-w-0 flex-1 pr-2",
@@ -1409,7 +1406,7 @@ function NavigationPanel({ route, stepIndex, rerouteState, coolerRouteOption, co
 						children: "Simulate Conditions"
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 						className: "truncate text-[10px] text-muted-foreground",
-						children: "Check for cooler route windows"
+						children: "Check for cooler forecast windows"
 					})]
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
 					type: "button",
@@ -1418,13 +1415,11 @@ function NavigationPanel({ route, stepIndex, rerouteState, coolerRouteOption, co
 					className: "flex shrink-0 items-center gap-1.5 rounded-lg bg-amber-500/20 px-2.5 py-1.5 text-xs font-semibold text-amber-300 transition-colors hover:bg-amber-500/30 disabled:opacity-50",
 					children: [isTriggeringReroute ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(LoaderCircle, { className: "h-3.5 w-3.5 animate-spin" }) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Sparkles, { className: "h-3.5 w-3.5" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "Simulate condition change" })]
 				})]
-			}) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
-				className: "mt-3 rounded-xl border border-border/40 bg-secondary/30 px-3 py-2.5 text-[10px] leading-relaxed text-muted-foreground",
-				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-					className: "font-semibold text-foreground/60",
-					children: "Condition simulation"
-				}), " is currently available for the Phoenix demo route only."]
 			}),
+			rerouteNotice ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "animate-sheet-up mt-3 rounded-lg border border-border/80 bg-secondary/40 px-3 py-2 text-xs text-muted-foreground",
+				children: rerouteNotice
+			}) : null,
 			rerouteState === "accepted" ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
 				className: "animate-sheet-up mt-3 rounded-lg px-3 py-2 text-xs",
 				style: {

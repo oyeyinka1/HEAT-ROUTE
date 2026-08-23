@@ -25,10 +25,11 @@ import {
   navSteps,
   routeAccent,
   routeAnalysis,
+  fastestGeometryCoords,
   type NavStep,
   type RouteOption,
 } from "@/lib/heatroute-data";
-import { getWalkingRoutes } from "@/lib/directions";
+import { getWalkingRoutes, type DirectionsResult } from "@/lib/directions";
 import { searchPlaces, type GeocodeSuggestion } from "@/lib/geocoding";
 import {
   getTemperatureHeatmap,
@@ -61,7 +62,10 @@ export const Route = createFileRoute("/app")({
       },
     ],
   }),
-  loader: async () => {
+  loader: async (): Promise<{
+    directions: DirectionsResult | null;
+    heatmap: FortyGuardHeatmapResult | null;
+  }> => {
     // No pre-fetch on page load — routing and heatmap are computed on demand
     // when the user submits an origin + destination search.
     return {
@@ -157,6 +161,7 @@ function HeatRouteApp() {
       : { ...routeAnalysis.routes[0]!, id: "r-cooler", label: "Cooler Alternative" };
   });
   const [coolerSlotLabel, setCoolerSlotLabel] = useState<string>("+6h (8:00 PM)");
+  const [rerouteNotice, setRerouteNotice] = useState<string | null>(null);
   const [isTriggeringReroute, setIsTriggeringReroute] = useState(false);
   const [routingSource, setRoutingSource] = useState<string | null>(loaderData?.directions?.source ?? null);
 
@@ -421,6 +426,7 @@ function HeatRouteApp() {
    */
   async function triggerSimulatedConditionChange() {
     setIsTriggeringReroute(true);
+    setRerouteNotice(null);
     try {
       const activeRoute = selected ?? routes[0]!;
       const activeCoords = activeRoute?.geometry || fastestGeometryCoords;
@@ -442,6 +448,11 @@ function HeatRouteApp() {
         },
       });
 
+      if (!rerouteData.available || rerouteData.cacheSource === "unavailable") {
+        setRerouteNotice(rerouteData.statusNotice || "Condition simulation unavailable for this location right now");
+        return;
+      }
+
       // ── AFTER: log the cooler slot's real metrics and provenance ─────────────
       console.info(
         "[Demo Reroute] AFTER — Cooler route metrics:",
@@ -453,25 +464,15 @@ function HeatRouteApp() {
         `highHeatMin=${rerouteData.route.metrics.highHeatMinutes}min,`,
         `durationMin=${rerouteData.route.metrics.durationMin}min`,
       );
-      console.info(
-        `[Demo Reroute] ΔPeak: ${(activeRoute?.metrics.peakTempC ?? 0) - rerouteData.route.metrics.peakTempC >= 0 ? "-" : "+"}${Math.abs((activeRoute?.metrics.peakTempC ?? 0) - rerouteData.route.metrics.peakTempC).toFixed(1)}°C |`,
-        `ΔHighHeat: ${(activeRoute?.metrics.highHeatMinutes ?? 0) - rerouteData.route.metrics.highHeatMinutes >= 0 ? "-" : "+"}${Math.abs((activeRoute?.metrics.highHeatMinutes ?? 0) - rerouteData.route.metrics.highHeatMinutes)}min`,
-      );
 
-      // Build cooler option: keep ALL identity/nav data from the real active route
-      // (geometry, steps, label, distanceKm) — only swap the temperature metrics
-      // from the FortyGuard +6h slot. Nothing about the destination or directions changes.
       const coolerOption: RouteOption = {
         ...activeRoute,
         id: "r-cooler",
         metrics: {
           ...activeRoute.metrics,
-          // Only these three fields come from the evening forecast slot:
           peakTempC: rerouteData.route.metrics.peakTempC,
           avgTempC: rerouteData.route.metrics.avgTempC,
           highHeatMinutes: rerouteData.route.metrics.highHeatMinutes,
-          // Duration is the same route — we keep the real durationMin from activeRoute
-          // (getCoolerRerouteData adds 1 min for the "+1 min" display, but we own that here)
         },
       };
 
@@ -482,8 +483,8 @@ function HeatRouteApp() {
       }
       setRerouteState("offered");
     } catch (err) {
-      console.warn("[Demo Reroute] Using fallback cooler option:", err);
-      setRerouteState("offered");
+      console.warn("[Demo Reroute] Reroute fetch failed:", err);
+      setRerouteNotice("Condition simulation unavailable for this location right now");
     } finally {
       setIsTriggeringReroute(false);
     }
@@ -504,13 +505,6 @@ function HeatRouteApp() {
       ? 1.0
       : undefined;
 
-  // Check whether the active route's geometry is within the Phoenix corridor.
-  // The Simulate Conditions feature uses cached Phoenix FortyGuard slot data —
-  // it is only meaningful when the user is navigating a Phoenix route.
-  const isPhoenixRoute = selected
-    ? isNearPhoenixCorridor(selected.geometry[0] ?? [-999, -999])
-    : false;
-
   return (
     <main className="relative h-[100dvh] w-full overflow-hidden bg-background">
       <ThermalMap
@@ -523,7 +517,7 @@ function HeatRouteApp() {
       />
 
       <TopBar
-        temp={routeAnalysis.currentTempC}
+        temp={selected?.metrics?.peakTempC ?? null}
         routingSource={routingSource}
         thermalSource={thermalSource}
       />
@@ -612,8 +606,8 @@ function HeatRouteApp() {
               rerouteState={rerouteState}
               coolerRouteOption={coolerRouteOption}
               coolerSlotLabel={coolerSlotLabel}
+              rerouteNotice={rerouteNotice}
               isTriggeringReroute={isTriggeringReroute}
-              isPhoenixRoute={isPhoenixRoute}
               onTriggerReroute={triggerSimulatedConditionChange}
               onAccept={acceptReroute}
               onDecline={() => setRerouteState("declined")}
@@ -622,6 +616,7 @@ function HeatRouteApp() {
               onExit={() => {
                 setPhase("routes");
                 setRerouteState("idle");
+                setRerouteNotice(null);
               }}
             />
           ) : null}
@@ -648,27 +643,30 @@ function TopBar({
   routingSource,
   thermalSource,
 }: {
-  temp: number;
+  temp?: number | null;
   routingSource?: string | null | undefined;
   thermalSource?: string | null | undefined;
 }) {
   return (
-    <header className="absolute inset-x-0 top-0 z-30 flex items-center justify-between gap-3 p-3.5 sm:p-4 md:p-6 md:pr-[452px] pointer-events-none">
-      {/* Brand logo & name — pointer-events-auto ensures clickability */}
-      <Link to="/" className="pointer-events-auto flex items-center gap-2 rounded-full p-1 -ml-1 transition-opacity hover:opacity-90">
+    <header className="absolute inset-x-0 top-0 z-30 flex items-center justify-between gap-3 p-3 sm:p-4 md:p-6 md:pr-[452px] pointer-events-none">
+      {/* Brand logo & name with solid dark pill background so map never bleeds through */}
+      <Link
+        to="/"
+        className="pointer-events-auto flex items-center gap-2 rounded-full border border-border/80 bg-void/95 px-3 py-1.5 shadow-lg backdrop-blur-md transition-opacity hover:opacity-90"
+      >
         <span
-          className="grid h-8 w-8 shrink-0 place-items-center rounded-full shadow-ember-glow"
+          className="grid h-7 w-7 shrink-0 place-items-center rounded-full shadow-ember-glow"
           style={{ background: "var(--gradient-heat-cta)" }}
         >
-          <Flame className="h-4 w-4 text-primary-foreground" />
+          <Flame className="h-3.5 w-3.5 text-primary-foreground" />
         </span>
-        <span className="font-display text-base font-bold tracking-tight text-foreground">HeatRoute</span>
+        <span className="font-display text-sm font-bold tracking-tight text-foreground sm:text-base">HeatRoute</span>
       </Link>
 
       <div className="pointer-events-auto flex items-center gap-2">
         {routingSource ? (
           <span
-            className="glass-panel hidden items-center gap-1.5 rounded-full px-3 py-1.5 font-mono text-[11px] text-muted-foreground sm:flex"
+            className="hidden items-center gap-1.5 rounded-full border border-border/80 bg-void/95 px-3 py-1.5 font-mono text-[11px] text-muted-foreground shadow-lg backdrop-blur-md sm:flex"
             title="Routing Engine Tier"
           >
             <span
@@ -688,7 +686,7 @@ function TopBar({
 
         {thermalSource ? (
           <span
-            className="glass-panel hidden items-center gap-1.5 rounded-full px-3 py-1.5 font-mono text-[11px] text-muted-foreground sm:flex"
+            className="hidden items-center gap-1.5 rounded-full border border-border/80 bg-void/95 px-3 py-1.5 font-mono text-[11px] text-muted-foreground shadow-lg backdrop-blur-md sm:flex"
             title="Temperature Grid Tier"
           >
             <span
@@ -706,16 +704,21 @@ function TopBar({
           </span>
         ) : null}
 
-        <div className="glass-panel flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs font-semibold sm:px-3">
-          <Thermometer className="h-3.5 w-3.5 text-primary" />
-          <span className="font-mono">{temp}°C</span>
-        </div>
+        {temp !== undefined && temp !== null && temp > 0 ? (
+          <div
+            title="Peak street-level temperature along selected route"
+            className="flex items-center gap-1.5 rounded-full border border-border/80 bg-void/95 px-2.5 py-1.5 text-xs font-semibold shadow-lg backdrop-blur-md sm:px-3"
+          >
+            <Thermometer className="h-3.5 w-3.5 text-primary" />
+            <span className="font-mono">{temp.toFixed(1)}°C</span>
+          </div>
+        ) : null}
 
         {/* Heat Intelligence button: Icon-only on mobile, full pill on desktop */}
         <Link
           to="/heat-intelligence"
           title="Heat Intelligence 12-hour outlook"
-          className="glass-panel flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs font-medium transition-colors hover:text-primary hover:border-border/80 sm:px-3"
+          className="flex items-center gap-1.5 rounded-full border border-border/80 bg-void/95 px-2.5 py-1.5 text-xs font-medium shadow-lg backdrop-blur-md transition-colors hover:border-primary/60 hover:text-primary sm:px-3"
         >
           <Layers className="h-3.5 w-3.5 text-primary" />
           <span className="hidden sm:inline">Heat Intelligence</span>
@@ -1453,8 +1456,8 @@ function NavigationPanel({
   rerouteState,
   coolerRouteOption,
   coolerSlotLabel,
+  rerouteNotice,
   isTriggeringReroute,
-  isPhoenixRoute = false,
   onTriggerReroute,
   onNext,
   onArrive,
@@ -1467,8 +1470,8 @@ function NavigationPanel({
   rerouteState: "idle" | "offered" | "accepted" | "declined";
   coolerRouteOption: RouteOption;
   coolerSlotLabel?: string;
+  rerouteNotice?: string | null;
   isTriggeringReroute?: boolean;
-  isPhoenixRoute?: boolean;
   onTriggerReroute: () => void;
   onNext: () => void;
   onArrive: () => void;
@@ -1574,32 +1577,32 @@ function NavigationPanel({
         </button>
       </div>
 
-      {/* Condition simulation trigger — Phoenix demo dataset only */}
-      {isPhoenixRoute ? (
-        <div className="mt-3 flex items-center justify-between rounded-xl border border-dashed border-amber-500/50 bg-amber-500/10 p-2.5">
-          <div className="min-w-0 flex-1 pr-2">
-            <p className="text-[11px] font-semibold text-amber-400">Simulate Conditions</p>
-            <p className="truncate text-[10px] text-muted-foreground">Check for cooler route windows</p>
-          </div>
-          <button
-            type="button"
-            onClick={onTriggerReroute}
-            disabled={isTriggeringReroute}
-            className="flex shrink-0 items-center gap-1.5 rounded-lg bg-amber-500/20 px-2.5 py-1.5 text-xs font-semibold text-amber-300 transition-colors hover:bg-amber-500/30 disabled:opacity-50"
-          >
-            {isTriggeringReroute ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <Sparkles className="h-3.5 w-3.5" />
-            )}
-            <span>Simulate condition change</span>
-          </button>
+      {/* Condition simulation trigger — works for any location with real live forecast or graceful error */}
+      <div className="mt-3 flex items-center justify-between rounded-xl border border-dashed border-amber-500/50 bg-amber-500/10 p-2.5">
+        <div className="min-w-0 flex-1 pr-2">
+          <p className="text-[11px] font-semibold text-amber-400">Simulate Conditions</p>
+          <p className="truncate text-[10px] text-muted-foreground">Check for cooler forecast windows</p>
         </div>
-      ) : (
-        <p className="mt-3 rounded-xl border border-border/40 bg-secondary/30 px-3 py-2.5 text-[10px] leading-relaxed text-muted-foreground">
-          <span className="font-semibold text-foreground/60">Condition simulation</span> is currently available for the Phoenix demo route only.
+        <button
+          type="button"
+          onClick={onTriggerReroute}
+          disabled={isTriggeringReroute}
+          className="flex shrink-0 items-center gap-1.5 rounded-lg bg-amber-500/20 px-2.5 py-1.5 text-xs font-semibold text-amber-300 transition-colors hover:bg-amber-500/30 disabled:opacity-50"
+        >
+          {isTriggeringReroute ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <Sparkles className="h-3.5 w-3.5" />
+          )}
+          <span>Simulate condition change</span>
+        </button>
+      </div>
+
+      {rerouteNotice ? (
+        <p className="animate-sheet-up mt-3 rounded-lg border border-border/80 bg-secondary/40 px-3 py-2 text-xs text-muted-foreground">
+          {rerouteNotice}
         </p>
-      )}
+      ) : null}
 
       {rerouteState === "accepted" ? (
         <p

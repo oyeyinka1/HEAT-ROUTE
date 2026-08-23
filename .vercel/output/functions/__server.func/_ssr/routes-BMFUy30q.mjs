@@ -1,8 +1,8 @@
 import { h as Link } from "../_libs/@tanstack/react-router+[...].mjs";
 import { n as require_jsx_runtime } from "../_libs/react+tanstack__react-query.mjs";
-import { i as routeAnalysis } from "./heatroute-data-BOhtU1ol.mjs";
+import { a as routeAnalysis } from "./heatroute-data-ClpyG0yJ.mjs";
 import { _ as Footprints, a as Thermometer, c as ShieldCheck, f as MapPinned, i as Timer, u as Route, v as Flame, w as ArrowRight } from "../_libs/lucide-react.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-DfaCp_Ve.js
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-BMFUy30q.js
 var import_jsx_runtime = require_jsx_runtime();
 var thermal_map_default = "/assets/thermal-map-Df4wSUBi.jpg";
 function Landing() {

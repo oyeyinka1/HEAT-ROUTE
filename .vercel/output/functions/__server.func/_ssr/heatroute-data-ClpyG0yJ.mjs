@@ -1,4 +1,27 @@
-//#region node_modules/.nitro/vite/services/ssr/assets/heatroute-data-BOhtU1ol.js
+//#region node_modules/.nitro/vite/services/ssr/assets/heatroute-data-ClpyG0yJ.js
+var heatSafeGeometryCoords = [
+	[-112.074, 33.4484],
+	[-112.0765, 33.4484],
+	[-112.0772, 33.4525],
+	[-112.0772, 33.458],
+	[-112.0773, 33.4635],
+	[-112.0774, 33.4695],
+	[-112.0775, 33.4745],
+	[-112.0796, 33.4745],
+	[-112.0796, 33.4772]
+];
+var fastestGeometryCoords = [
+	[-112.074, 33.4484],
+	[-112.074, 33.451],
+	[-112.0741, 33.4552],
+	[-112.0741, 33.4601],
+	[-112.0742, 33.4655],
+	[-112.0743, 33.471],
+	[-112.0743, 33.475],
+	[-112.0775, 33.4751],
+	[-112.0796, 33.4751],
+	[-112.0796, 33.4772]
+];
 var routeAnalysis = {
 	origin: "Current location",
 	destination: "Encanto Park, Phoenix",
@@ -8,18 +31,7 @@ var routeAnalysis = {
 		id: "r-fastest",
 		kind: "fastest",
 		label: "Fastest",
-		geometry: [
-			[-112.074, 33.4484],
-			[-112.074, 33.451],
-			[-112.0741, 33.4552],
-			[-112.0741, 33.4601],
-			[-112.0742, 33.4655],
-			[-112.0743, 33.471],
-			[-112.0743, 33.475],
-			[-112.0775, 33.4751],
-			[-112.0796, 33.4751],
-			[-112.0796, 33.4772]
-		],
+		geometry: fastestGeometryCoords,
 		recommended: false,
 		metrics: {
 			durationMin: 17,
@@ -32,17 +44,7 @@ var routeAnalysis = {
 		id: "r-heat-safe",
 		kind: "heat-safe",
 		label: "Heat-Safe",
-		geometry: [
-			[-112.074, 33.4484],
-			[-112.0765, 33.4484],
-			[-112.0772, 33.4525],
-			[-112.0772, 33.458],
-			[-112.0773, 33.4635],
-			[-112.0774, 33.4695],
-			[-112.0775, 33.4745],
-			[-112.0796, 33.4745],
-			[-112.0796, 33.4772]
-		],
+		geometry: heatSafeGeometryCoords,
 		recommended: true,
 		metrics: {
 			durationMin: 20,
@@ -104,4 +106,4 @@ var routeAccent = {
 	"heat-safe": "var(--safe)"
 };
 //#endregion
-export { routeAnalysis as i, navSteps as n, routeAccent as r, analysisStages as t };
+export { routeAnalysis as a, routeAccent as i, fastestGeometryCoords as n, navSteps as r, analysisStages as t };

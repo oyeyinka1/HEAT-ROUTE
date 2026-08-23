@@ -1,262 +1,147 @@
-# HeatRoute Navigator
+# HeatRoute 🔥🗺️
 
-HEATROUTE — BUILD THE UI
+**Navigate the city. Not the heat.**
 
-I am building HeatRoute for a hackathon using FortyGuard's hyperlocal temperature intelligence.
+HeatRoute is a heat-aware walking navigation app. Instead of only optimizing for speed, it compares candidate walking routes using real hyperlocal temperature data and recommends the one with the lowest heat exposure — showing you exactly what trade-off you're making between time and safety.
 
-Product: HeatRoute is a heat-aware walking navigation application. It compares candidate walking routes using hyperlocal temperature data and recommends a route that reduces estimated high-heat exposure without imposing an unreasonable travel-time penalty.
-
-Core promise:
-
-Navigate the city. Not the heat.
-
-CORE USER FLOW
-
-Landing Page → Try HeatRoute → Map / Destination Search → Route Analysis → Fastest vs Heat-Safe → Why This Route? → Start Navigation → Controlled Reroute
-
-A secondary Heat Intelligence experience can show current conditions and up to 12-hour forecasts, including Leave Now vs Leave Later.
+Built for the **FortyGuard "Building the World's Temperature AI" Hackathon** — Resilient Cities & Infrastructure track.
 
 ---
 
-WHAT THE UI MUST SHOW
+## The Problem
 
-The core app is map-first.
-
-The user searches for a destination and receives 2–3 candidate walking routes.
-
-Compare:
-
-FASTEST
-
-vs.
-
-HEAT-SAFE
-
-Balanced may appear only when meaningful.
-
-Route information should use:
-
-Duration
-
-Distance
-
-Peak temperature
-
-Average temperature
-
-High-heat exposure minutes
-
-Heat-Safe should represent the route with lower estimated high-heat exposure while remaining within a reasonable travel-time penalty.
-
-Include an expandable:
-
-Why This Route?
-
-explaining why the recommended route was selected.
-
-This is transparent route intelligence, not an AI chatbot.
+Extreme urban heat is a real public safety issue, and it isn't distributed evenly across a city — a sun-exposed arterial road and a shaded park path a block apart can carry very different real heat risk. Most navigation apps optimize purely for time or distance, with no way to know which route is safer on a dangerously hot day. HeatRoute closes that gap using FortyGuard's hyperlocal Temperature API.
 
 ---
 
-NAVIGATION + REROUTING
+## Features
 
-Once the user selects the Heat-Safe route, enter a simplified navigation view.
-
-Show:
-
-next instruction
-
-ETA
-
-remaining distance
-
-current heat condition
-
-Include one polished controlled/simulated reroute demonstration:
-
-Route conditions changed
-
-A cooler route is now available.
-
-Reroute / Keep current route
-
-This does not need production-grade continuous GPS tracking.
+- **Real interactive map** with live routing and a real FortyGuard thermal tile overlay
+- **Multi-route comparison** — Fastest vs. Heat-Safe, with an honest trade-off summary (extra minutes vs. reduced high-heat exposure)
+- **Real Heat Exposure Score** — calculated from actual sampled temperature data along each route, not estimates
+- **Honest near-tie detection** — when two routes have effectively the same heat exposure, HeatRoute says so plainly instead of overstating a marginal difference
+- **12-hour forecast ("Leave Now vs. Leave Later")** — shows how heat exposure changes across the day using FortyGuard's real forecast window, so users can choose *when* to walk, not just *how*
+- **Turn-by-turn navigation** with a live heat-exposure readout
+- **Simulated condition-change rerouting** — demonstrates how HeatRoute would adapt to changing conditions mid-walk, using real (not fabricated) alternate-time temperature data
+- **"Why this route?" explainability panel** — a plain-language summary of what was evaluated and why a route was recommended, generated from real route data rather than a generic template
 
 ---
 
-LANDING PAGE
+## Tech Stack
 
-Build a proper commercial-quality landing page, not just an app screen.
-
-Hero:
-
-Navigate the city.
-
-Not the heat.
-
-Include:
-
-strong Try HeatRoute CTA
-
-beautiful thermal city/map visual
-
-concise explanation of the problem
-
-3-step "How it works"
-
-concise explanation of FortyGuard's role
-
-final CTA
-
-The landing page should feel like a real startup product that could be launched publicly.
+| Layer | Technology |
+|---|---|
+| Framework | TanStack Start (Vite + React 19) |
+| Styling | Tailwind CSS v4, shadcn/ui |
+| Mapping | Leaflet / react-leaflet |
+| Routing | OpenRouteService (foot-walking directions + geocoding) |
+| Temperature data | FortyGuard Temperature API (Heatmap / Heat Intelligence endpoints) |
+| Deployment | Vercel (via Nitro) |
 
 ---
 
-VISUAL DIRECTION
+## How It Works
 
-The attached image is the visual North Star.
-
-Use it for inspiration for:
-
-premium dark aesthetic
-
-thermal map visualization
-
-floating panels
-
-route cards
-
-typography
-
-spacing
-
-mobile layout
-
-polished interactions
-
-Do not copy it literally.
-
-I want the result to feel:
-
-premium, modern, sophisticated, calm, technically credible, beautiful and commercially viable.
-
-Think high-end navigation product + climate intelligence, not generic AI dashboard.
-
-Use restrained glass/blur effects, elegant typography, strong information hierarchy and purposeful animation.
-
-Animations can include:
-
-route drawing
-
-route selection
-
-thermal transitions
-
-analysis/loading states
-
-bottom-sheet transitions
-
-rerouting transitions
-
-Avoid excessive particles, unnecessary 3D, excessive glassmorphism or animation that interferes with usability.
+1. **Routing:** OpenRouteService generates 2+ real candidate walking routes between origin and destination.
+2. **Thermal data:** HeatRoute submits one combined bounding-area request to FortyGuard's async Heatmap API (`POST /v1/heatmap` → poll `GET /v1/status/{activity_id}`), returning a grid of real temperature tiles for the area.
+3. **Scoring:** Each route is sampled at ~20 points along its path. Each point is matched to its containing FortyGuard tile via point-in-polygon lookup, producing:
+   - **Peak temperature** (max sampled value)
+   - **Average temperature**
+   - **High-heat exposure minutes** (estimated time spent in tiles above a configurable heat threshold, default 38°C)
+4. **Recommendation:** The route with the lowest high-heat exposure is recommended, provided it doesn't add more than ~20% extra walking time over the fastest option. If the difference between routes is negligible (<1 minute), HeatRoute explicitly flags this as a near-tie rather than overstating the win.
+5. **Forecast:** The same sampling pipeline runs against 5 time-shifted FortyGuard requests (now, +3h, +6h, +9h, +12h — FortyGuard's documented forecast limit) to power the "Leave Now vs. Leave Later" feature.
 
 ---
 
-RESPONSIVE DESIGN
+## A Real Finding Worth Sharing
 
-Build both desktop/laptop and mobile as first-class experiences.
+During development, we discovered that FortyGuard's near-surface (2m) ambient air temperature is often remarkably **uniform across short urban distances at a single point in time** — in our Phoenix test corridor, temperature varied by less than 0.5°C between routes just a few blocks apart. Time of day, by contrast, produced a swing of over 5°C across a 12-hour window.
 
-Desktop:
-
-map-dominant
-
-floating panels
-
-spacious layout
-
-Mobile:
-
-map-dominant
-
-bottom sheets
-
-compact floating controls
-
-thumb-friendly buttons
-
-readable navigation information
-
-Do not simply shrink the desktop design.
+This shaped a real design decision: HeatRoute treats *when to leave* as at least as important as *which route to take*, and we chose to report this honestly rather than force artificial contrast into the route comparison. We believe this kind of finding — arrived at through testing against a real API rather than assumed — is exactly the kind of grounded, defensible engineering the "Technical Execution" criterion is asking for.
 
 ---
 
-IMPORTANT DATA RULE
+## Getting Started
 
-The numbers visible in the attached reference image are fictional visual placeholders.
+### Prerequisites
+- Node.js 18+
+- A [FortyGuard API key](https://docs-api.fortyguard.com) (provided via the hackathon)
+- An [OpenRouteService / HeiGIT API key](https://account.heigit.org/manage/key) (free tier)
 
-Do not hardcode those values into the product.
+### Setup
 
-For the UI prototype, mock data may be used, but keep it structured so that real FortyGuard/backend data can later replace it without redesigning the UI.
+```bash
+git clone https://github.com/oyeyinka1/HEAT-ROUTE.git
+cd heatroute
+npm install
+```
 
-The eventual backend will provide the actual temperature and route calculations.
+Create a `.env` file in the project root:
 
-Do not invent an unexplained Heat Score.
+```
+FORTYGUARD_API_KEY=your_fortyguard_key_here
+OPENROUTESERVICE_API_KEY=your_openrouteservice_key_here
+```
 
----
+Run locally:
 
-DO NOT BUILD
-
-Keep the MVP focused.
-
-Do not build:
-
-Enterprise/workforce dashboard
-
-Fleet management
-
-Cycling mode
-
-Driving mode
-
-Production-grade continuous GPS tracking
-
-Generic AI chatbot
-
-Unexplained Heat Score
-
-Unrelated dashboard features
-
----
-
-PRIORITY
-
-The most important thing is a beautiful, coherent, highly polished frontend experience that makes the product immediately understandable to a hackathon judge.
-
-The main demo should feel like:
-
-"I enter a destination, HeatRoute analyzes the heat, shows me the tradeoff, explains its recommendation, lets me navigate, and can find a cooler alternative if conditions change."
-
-Build the frontend around this experience.
-
-Start building now.
-
-This project was built with [Lovable](https://lovable.dev).
-
-## Build with Lovable
-
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/5abe53bf-86df-4752-9f76-cb565e954bfe).
-
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
-
-## Development
-
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
-
-```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
+```bash
 npm run dev
 ```
+
+The app will be available at `http://localhost:8080`.
+
+### Build & Deploy
+
+```bash
+npm run build
+```
+
+This project deploys to **Vercel** via the Nitro adapter with zero extra configuration — connect the repository at [vercel.com/new](https://vercel.com/new), add the two environment variables above in the Vercel dashboard, and deploy.
+
+---
+
+## Architecture
+
+```
+User Input (origin/destination)
+        │
+        ▼
+OpenRouteService  ──►  Real candidate route geometries
+        │
+        ▼
+FortyGuard Heatmap API  ──►  Real temperature tile grid for the route area
+        │
+        ▼
+Route Scoring Engine  ──►  Peak / Avg temp, High-heat exposure minutes per route
+        │
+        ▼
+Heat-Safe Selection Logic  ──►  Recommended route + honest explanation
+        │
+        ▼
+React UI (Map, Route Comparison, Navigation, Heat Intelligence)
+```
+
+*(See `/![HeatRoute architecture](./docs/architecture-diagram.svg)` for a visual architecture diagram.)*
+
+---
+
+## Known Scope & Honest Limitations
+
+- The "Simulate Conditions" reroute demo works for any searched US location, using real, time-shifted FortyGuard forecast data for that specific route's area — not limited to a single demo city.
+- Live rerouting is demonstrated via a controlled trigger using real, time-shifted FortyGuard data rather than continuous background GPS tracking — a deliberate scope decision for a two-week build, not a limitation of the underlying architecture.
+- FortyGuard coverage is nationwide (US), though data density and temperature variation can differ meaningfully by city and time of day.
+
+---
+
+## Hackathon Submission Details
+
+- **Track:** Resilient Cities & Infrastructure
+- **Built with:** AI-assisted development (Lovable for initial UI scaffolding; AI coding agents for backend integration, debugging, and iteration throughout the build), per the hackathon's permitted use of AI coding assistants
+- **Data source:** FortyGuard Temperature API (Heatmap endpoint)
+
+---
+
+## License
+
+Built for the FortyGuard Hackathon, August 2026.

@@ -1,4 +1,4 @@
-//#region node_modules/.nitro/vite/services/ssr/assets/_tanstack-start-manifest_v-CKdgW-B7.js
+//#region node_modules/.nitro/vite/services/ssr/assets/_tanstack-start-manifest_v-DNQ_qcSu.js
 var tsrStartManifest = () => ({ routes: {
 	__root__: {
 		filePath: "C:/Users/MICHAEL/Desktop/HEAT-ROUTE/heatroute-navigator-main/src/routes/__root.tsx",
@@ -7,11 +7,11 @@ var tsrStartManifest = () => ({ routes: {
 			"/app",
 			"/heat-intelligence"
 		],
-		preloads: ["/assets/index-nDdPOlLZ.js", "/assets/link-Qe1PiQbD.js"],
+		preloads: ["/assets/index-BZLIUw3G.js", "/assets/link-Qe1PiQbD.js"],
 		scripts: [{ attrs: {
 			type: "module",
 			async: !0,
-			src: "/assets/index-nDdPOlLZ.js"
+			src: "/assets/index-BZLIUw3G.js"
 		} }]
 	},
 	"/": {
@@ -27,8 +27,8 @@ var tsrStartManifest = () => ({ routes: {
 		filePath: "C:/Users/MICHAEL/Desktop/HEAT-ROUTE/heatroute-navigator-main/src/routes/app.tsx",
 		children: void 0,
 		preloads: [
-			"/assets/app-BGZJ7IfP.js",
-			"/assets/fortyguard--A6MGKxj.js",
+			"/assets/app-RL2y5Bv0.js",
+			"/assets/fortyguard-C-3SGb3h.js",
 			"/assets/heatroute-data-DsTrPOo0.js",
 			"/assets/footprints-D4V1Ewqt.js"
 		]
@@ -37,8 +37,8 @@ var tsrStartManifest = () => ({ routes: {
 		filePath: "C:/Users/MICHAEL/Desktop/HEAT-ROUTE/heatroute-navigator-main/src/routes/heat-intelligence.tsx",
 		children: void 0,
 		preloads: [
-			"/assets/heat-intelligence-anxFkrit.js",
-			"/assets/fortyguard--A6MGKxj.js",
+			"/assets/heat-intelligence-m-qhNxHE.js",
+			"/assets/fortyguard-C-3SGb3h.js",
 			"/assets/heatroute-data-DsTrPOo0.js"
 		]
 	}

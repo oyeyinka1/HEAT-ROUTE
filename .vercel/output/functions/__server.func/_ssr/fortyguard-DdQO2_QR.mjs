@@ -2,11 +2,11 @@ import { r as __toESM } from "../_runtime.mjs";
 import { c as createServerFn, i as TSS_SERVER_FUNCTION } from "./createServerFn-CIHAFgYl.mjs";
 import { f as require_react } from "../_libs/@react-leaflet/core+[...].mjs";
 import { n as require_jsx_runtime } from "../_libs/react+tanstack__react-query.mjs";
-import { t as getServerFnById } from "../__23tanstack-start-server-fn-resolver-CS4VHRug.mjs";
-import { a as tupleType, n as numberType, r as objectType, t as arrayType } from "../_libs/zod.mjs";
+import { t as getServerFnById } from "../__23tanstack-start-server-fn-resolver-BNXmm2uf.mjs";
+import { i as objectType, n as arrayType, o as tupleType, r as numberType, t as anyType } from "../_libs/zod.mjs";
 import { t as require_leaflet_src } from "../_libs/leaflet.mjs";
 import { a as CircleMarker, i as MapContainer, n as Polyline, o as useMap, r as Polygon, t as TileLayer } from "../_libs/react-leaflet.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/fortyguard-BUEdrfTf.js
+//#region node_modules/.nitro/vite/services/ssr/assets/fortyguard-DdQO2_QR.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 var import_leaflet_src = /* @__PURE__ */ __toESM(require_leaflet_src());
@@ -259,6 +259,9 @@ function isPointInPolygon(pt, polygon) {
 	return inside;
 }
 /**
+* Helper to compute stats from tiles array if not provided by API
+*/
+/**
 * Server function to fetch and cache FortyGuard temperature tiles for a set of routes
 */
 var getTemperatureHeatmap = createServerFn({ method: "POST" }).validator(objectType({ routesCoordinates: arrayType(arrayType(tupleType([numberType(), numberType()]))) })).handler(createSsrRpc("18953c3e96f1fbcf3e2ef03dd924a79576ec1301eb37c15083e132c1cdc5565e"));
@@ -323,7 +326,8 @@ function calculateRouteThermalMetrics(routeCoordinates, durationMin, tiles, defa
 */
 var getRouteForecast = createServerFn({ method: "POST" }).validator(objectType({
 	routeCoordinates: arrayType(tupleType([numberType(), numberType()])),
-	durationMin: numberType().default(20)
+	durationMin: numberType().default(20),
+	currentTiles: arrayType(anyType()).optional()
 })).handler(createSsrRpc("a6f30602e4362437b274a3a6b2c7fe6920610c50e043e40cc2c8b1c3f9b6eac6"));
 /**
 * Server function to fetch real cooler route thermal metrics and tiles

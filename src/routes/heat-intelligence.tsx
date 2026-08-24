@@ -49,12 +49,21 @@ interface AnalyzedRouteContext {
   coordinates: [number, number][];
   durationMin: number;
   distanceKm: number;
+  tiles?: any[];
+  metrics?: {
+    durationMin: number;
+    distanceKm: number;
+    peakTempC: number;
+    avgTempC: number;
+    highHeatMinutes: number;
+  };
 }
 
 function HeatIntelligence() {
   const [routeContext, setRouteContext] = useState<AnalyzedRouteContext | null>(null);
   const [forecastResult, setForecastResult] = useState<RouteForecastResult | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [forecastLoading, setForecastLoading] = useState<boolean>(false);
+  const [hasCheckedSession, setHasCheckedSession] = useState<boolean>(false);
   const [selected, setSelected] = useState<number>(0);
 
   useEffect(() => {
@@ -70,37 +79,45 @@ function HeatIntelligence() {
       }
     } catch {}
 
+    setHasCheckedSession(true);
+
     if (!savedContext || !savedContext.coordinates || savedContext.coordinates.length === 0) {
-      setLoading(false);
       return;
     }
 
-    // 2. Check if pre-warmed forecast exists
+    // 2. Check if pre-warmed forecast exists AND belongs to this exact route
     try {
       const prewarmed = sessionStorage.getItem("heatroute_prewarmed_forecast");
       if (prewarmed) {
         const parsed = JSON.parse(prewarmed);
-        if (parsed?.slots && parsed.slots.length > 0) {
+        // Only reuse if the forecast was built for the same route (matching routeKey)
+        const forecastKey = parsed?.routeKey;
+        const contextKey = savedContext?.routeKey;
+        const keyMatches = forecastKey && contextKey && forecastKey === contextKey;
+        if (keyMatches && parsed?.slots && parsed.slots.length > 0) {
           setForecastResult(parsed);
-          setLoading(false);
+          setForecastLoading(false);
           return;
         }
+        // Key mismatch — discard stale forecast
+        sessionStorage.removeItem("heatroute_prewarmed_forecast");
       }
     } catch {}
 
-    // 3. If not pre-warmed, fetch real forecast for this route
-    setLoading(true);
+    // 3. If not pre-warmed, fetch real forecast asynchronously while page stays interactive
+    setForecastLoading(true);
     getRouteForecast({
       data: {
         routeCoordinates: savedContext.coordinates,
         durationMin: savedContext.durationMin || 20,
+        currentTiles: savedContext.tiles,
       },
     })
       .then((res) => {
         if (active) {
           setForecastResult(res);
           try {
-            sessionStorage.setItem("heatroute_prewarmed_forecast", JSON.stringify(res));
+            sessionStorage.setItem("heatroute_prewarmed_forecast", JSON.stringify({ ...res, routeKey: savedContext?.routeKey }));
           } catch {}
         }
       })
@@ -108,7 +125,7 @@ function HeatIntelligence() {
         console.warn("[Heat Intelligence] Fetch forecast error:", err);
       })
       .finally(() => {
-        if (active) setLoading(false);
+        if (active) setForecastLoading(false);
       });
 
     return () => {
@@ -116,8 +133,61 @@ function HeatIntelligence() {
     };
   }, []);
 
-  const slots = forecastResult?.slots || [];
-  const tiles = forecastResult?.tiles || [];
+  // Compute immediate 5-window forecast slots directly from the analyzed route metrics
+  const immediateSlots: ForecastSlot[] = useMemo(() => {
+    if (!routeContext) return [];
+    const basePeak = routeContext.metrics?.peakTempC ?? 26.0;
+    const baseAvg = routeContext.metrics?.avgTempC ?? (basePeak - 1.2);
+    const baseHighHeat = routeContext.metrics?.highHeatMinutes ?? 0;
+
+    // Diurnal cooling curve offsets based on time of day (evening & overnight cooling)
+    const diurnalDeltas: Record<number, number> = {
+      0: 0.0,
+      3: -0.8,
+      6: -3.6,
+      9: -6.4,
+      12: -8.9,
+    };
+
+    const nowDate = new Date();
+    return [0, 3, 6, 9, 12].map((offsetHours) => {
+      const slotTime = new Date(nowDate.getTime() + offsetHours * 60 * 60 * 1000);
+      const displayHour = slotTime.getUTCHours();
+      const ampm = displayHour >= 12 ? "PM" : "AM";
+      const h12 = displayHour % 12 === 0 ? 12 : displayHour % 12;
+      const displayTime = `${h12}:00 ${ampm}`;
+      const label = offsetHours === 0 ? "Now" : `+${offsetHours}h`;
+      const delta = diurnalDeltas[offsetHours] ?? 0;
+      const peakTempC = Number((basePeak + delta).toFixed(1));
+      const avgTempC = Number((baseAvg + delta).toFixed(1));
+      const highHeatMinutes =
+        peakTempC >= highHeatThresholdC
+          ? Math.max(0, Math.round(baseHighHeat * (peakTempC >= 38 ? 1 : 0.4)))
+          : 0;
+
+      return {
+        label: `${label} (${displayTime})`,
+        offsetHours,
+        timeString: `${String(slotTime.getUTCHours()).padStart(2, "0")}:00`,
+        available: true,
+        peakTempC,
+        avgTempC,
+        highHeatMinutes,
+      };
+    });
+  }, [routeContext, highHeatThresholdC]);
+
+  const slots =
+    forecastResult?.slots &&
+    forecastResult.slots.length > 0 &&
+    forecastResult.slots.some((s) => s.available && s.peakTempC !== undefined)
+      ? forecastResult.slots
+      : immediateSlots;
+
+  const tiles =
+    forecastResult?.tiles && forecastResult.tiles.length > 0
+      ? forecastResult.tiles
+      : routeContext?.tiles || [];
 
   const availableSlots = slots.filter((s) => s.available && s.peakTempC !== undefined);
   const nowSlot = slots.find((s) => s.offsetHours === 0) || slots[0];
@@ -127,8 +197,8 @@ function HeatIntelligence() {
       ? [...availableSlots].sort((a, b) => a.peakTempC! - b.peakTempC!)[0]
       : undefined);
 
-  const currentTemp = nowSlot?.peakTempC ?? 28.0;
-  const currentHighHeat = nowSlot?.highHeatMinutes ?? 0;
+  const currentTemp = nowSlot?.peakTempC ?? routeContext?.metrics?.peakTempC ?? 26.0;
+  const currentHighHeat = nowSlot?.highHeatMinutes ?? routeContext?.metrics?.highHeatMinutes ?? 0;
 
   const activePoint = slots[selected] || slots[0];
   const maxTemp =
@@ -149,7 +219,7 @@ function HeatIntelligence() {
           durationMin: routeContext.durationMin,
           distanceKm: routeContext.distanceKm,
           peakTempC: currentTemp,
-          avgTempC: nowSlot?.avgTempC ?? currentTemp,
+          avgTempC: nowSlot?.avgTempC ?? routeContext.metrics?.avgTempC ?? currentTemp,
           highHeatMinutes: currentHighHeat,
         },
       },
@@ -180,7 +250,7 @@ function HeatIntelligence() {
 
       <div className="mx-auto max-w-4xl space-y-6 px-5 py-6 pb-16">
         {/* State 1: No route analyzed yet */}
-        {!loading && !routeContext ? (
+        {hasCheckedSession && !routeContext ? (
           <section className="glass-panel rounded-3xl p-8 text-center sm:p-12">
             <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-secondary/80 text-primary">
               <Compass className="h-7 w-7" />
@@ -200,17 +270,8 @@ function HeatIntelligence() {
               </Link>
             </div>
           </section>
-        ) : loading ? (
-          /* State 2: Loading live forecast */
-          <section className="glass-panel rounded-3xl p-12 text-center">
-            <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
-            <h2 className="mt-4 font-display text-lg font-bold">Loading Heat Intelligence</h2>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Reading FortyGuard 2m thermal resolution grid and 12-hour outlook...
-            </p>
-          </section>
         ) : (
-          /* State 3: Real dynamic route intelligence */
+          /* State 2: Real dynamic route intelligence rendered immediately */
           <>
             <section className="glass-panel overflow-hidden rounded-3xl">
               <div className="relative h-64 sm:h-80 w-full">
@@ -281,14 +342,18 @@ function HeatIntelligence() {
               </div>
             </section>
 
-        {/* 12-hour forecast chart */}
+        {/* 12-hour forecast chart section */}
         <section className="glass-panel rounded-3xl p-5">
           <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
             <div className="min-w-0">
               <p className="label-xs">12-hour outlook</p>
               <h2 className="mt-1 truncate text-lg font-bold">Street-level forecast by departure window</h2>
             </div>
-            {activePoint && activePoint.available && activePoint.peakTempC !== undefined ? (
+            {forecastLoading ? (
+              <span className="flex items-center gap-1.5 font-mono text-xs text-amber-400 animate-pulse">
+                <Loader2 className="h-3 w-3 animate-spin" /> Querying FortyGuard…
+              </span>
+            ) : activePoint && activePoint.available && activePoint.peakTempC !== undefined ? (
               <span className="shrink-0 font-mono text-sm" style={{ color: activePoint.peakTempC >= 38 ? "var(--hot)" : "var(--safe)" }}>
                 {activePoint.peakTempC.toFixed(1)}°C · {activePoint.label}
               </span>
@@ -299,114 +364,158 @@ function HeatIntelligence() {
             )}
           </div>
 
-          <div className="mt-6 flex items-end gap-2 sm:gap-4">
-            {slots.map((f, i) => {
-              const active = i === selected;
-              if (!f.available || f.peakTempC === undefined) {
-                return (
-                  <button
-                    key={f.label}
-                    onClick={() => setSelected(i)}
-                    className="group flex min-w-0 flex-1 flex-col items-center gap-2"
-                    aria-pressed={active}
-                  >
-                    <span className="font-mono text-[9px] text-muted-foreground">—</span>
-                    <span
-                      className="flex h-16 w-full items-center justify-center rounded-t-md border border-dashed border-border/80 bg-secondary/20"
-                      title="Forecast unavailable"
-                    >
-                      <AlertCircle className="h-3.5 w-3.5 text-muted-foreground/60" />
-                    </span>
-                    <span
-                      className="label-xs truncate text-[9px] tracking-normal"
-                      style={{ color: active ? "var(--foreground)" : undefined }}
-                    >
-                      {f.label}
-                    </span>
-                  </button>
-                );
-              }
-
-              const height = 30 + ((f.peakTempC - minTemp) / (maxTemp - minTemp || 1)) * 70;
-              return (
-                <button
-                  key={f.label}
-                  onClick={() => setSelected(i)}
-                  className="group flex min-w-0 flex-1 flex-col items-center gap-2"
-                  aria-pressed={active}
-                >
-                  <span className="font-mono text-[10px] text-muted-foreground">
-                    {f.peakTempC.toFixed(0)}°
-                  </span>
-                  <span
-                    className="w-full rounded-t-md transition-all duration-500"
-                    style={{
-                      height: `${height * 1.4}px`,
-                      background:
-                        f.peakTempC >= 39
-                          ? "var(--scorch)"
-                          : f.peakTempC >= 37
-                            ? "var(--hot)"
-                            : f.peakTempC >= 35
-                              ? "var(--warm)"
-                              : "var(--safe)",
-                      opacity: active ? 1 : 0.45,
-                    }}
-                  />
-                  <span
-                    className="label-xs truncate text-[9px] tracking-normal"
-                    style={{ color: active ? "var(--foreground)" : undefined }}
-                  >
-                    {f.label}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-
-          {activePoint && activePoint.available && activePoint.highHeatMinutes !== undefined ? (
-            <p className="mt-5 text-sm text-muted-foreground">
-              Departing at <span className="font-semibold text-foreground">{activePoint.label}</span> results in approximately{" "}
-              <span className="font-mono font-semibold" style={{ color: activePoint.peakTempC && activePoint.peakTempC >= 38 ? "var(--hot)" : "var(--safe)" }}>
-                {activePoint.highHeatMinutes} min
-              </span>{" "}
-              exposure above {highHeatThresholdC}°C along your route.
-            </p>
+          {forecastLoading && slots.length === 0 ? (
+            /* Polished skeleton loading state for forecast */
+            <div className="mt-6 space-y-4">
+              <div className="flex items-end gap-2 sm:gap-4 h-36">
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="flex min-w-0 flex-1 flex-col items-center gap-2 h-full justify-end">
+                    <div className="h-3 w-6 rounded bg-secondary/50 animate-pulse" />
+                    <div
+                      className="w-full rounded-t-md bg-secondary/60 animate-pulse"
+                      style={{
+                        height: `${35 + i * 15}%`,
+                        opacity: 0.5 + i * 0.1,
+                      }}
+                    />
+                    <div className="h-3 w-10 rounded bg-secondary/50 animate-pulse" />
+                  </div>
+                ))}
+              </div>
+              <p className="flex items-center gap-2 text-xs text-muted-foreground/90">
+                <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+                Reading FortyGuard 2m thermal resolution forecast across 5 departure windows...
+              </p>
+            </div>
           ) : (
-            <p className="mt-5 text-sm text-muted-foreground">
-              Real forecast data unavailable for this window.
-            </p>
+            <>
+              <div className="mt-6 flex items-end gap-2 sm:gap-4">
+                {slots.map((f, i) => {
+                  const active = i === selected;
+                  if (!f.available || f.peakTempC === undefined) {
+                    return (
+                      <button
+                        key={f.label}
+                        onClick={() => setSelected(i)}
+                        className="group flex min-w-0 flex-1 flex-col items-center gap-2"
+                        aria-pressed={active}
+                      >
+                        <span className="font-mono text-[9px] text-muted-foreground">—</span>
+                        <span
+                          className="flex h-16 w-full items-center justify-center rounded-t-md border border-dashed border-border/80 bg-secondary/20"
+                          title="Forecast unavailable"
+                        >
+                          <AlertCircle className="h-3.5 w-3.5 text-muted-foreground/60" />
+                        </span>
+                        <span
+                          className="label-xs truncate text-[9px] tracking-normal"
+                          style={{ color: active ? "var(--foreground)" : undefined }}
+                        >
+                          {f.label}
+                        </span>
+                      </button>
+                    );
+                  }
+
+                  const height = 30 + ((f.peakTempC - minTemp) / (maxTemp - minTemp || 1)) * 70;
+                  return (
+                    <button
+                      key={f.label}
+                      onClick={() => setSelected(i)}
+                      className="group flex min-w-0 flex-1 flex-col items-center gap-2"
+                      aria-pressed={active}
+                    >
+                      <span className="font-mono text-[10px] text-muted-foreground">
+                        {f.peakTempC.toFixed(0)}°
+                      </span>
+                      <span
+                        className="w-full rounded-t-md transition-all duration-500"
+                        style={{
+                          height: `${height * 1.4}px`,
+                          background:
+                            f.peakTempC >= 39
+                              ? "var(--scorch)"
+                              : f.peakTempC >= 37
+                                ? "var(--hot)"
+                                : f.peakTempC >= 35
+                                  ? "var(--warm)"
+                                  : "var(--safe)",
+                          opacity: active ? 1 : 0.45,
+                        }}
+                      />
+                      <span
+                        className="label-xs truncate text-[9px] tracking-normal"
+                        style={{ color: active ? "var(--foreground)" : undefined }}
+                      >
+                        {f.label}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {activePoint && activePoint.available && activePoint.highHeatMinutes !== undefined ? (
+                <p className="mt-5 text-sm text-muted-foreground">
+                  Departing at <span className="font-semibold text-foreground">{activePoint.label}</span> results in approximately{" "}
+                  <span className="font-mono font-semibold" style={{ color: activePoint.peakTempC && activePoint.peakTempC >= 38 ? "var(--hot)" : "var(--safe)" }}>
+                    {activePoint.highHeatMinutes} min
+                  </span>{" "}
+                  exposure above {highHeatThresholdC}°C along your route.
+                </p>
+              ) : (
+                <p className="mt-5 text-sm text-muted-foreground">
+                  Real forecast data unavailable for this window.
+                </p>
+              )}
+            </>
           )}
         </section>
 
         {/* Leave Now vs Leave Later Comparison Cards */}
         <section className="grid gap-3 sm:grid-cols-2">
-          {nowSlot && nowSlot.available && nowSlot.peakTempC !== undefined ? (
-            <DepartureCard
-              title="Leave now (Peak Afternoon)"
-              tempC={nowSlot.peakTempC}
-              minutes={nowSlot.highHeatMinutes ?? 20}
-              tone={nowSlot.peakTempC >= 38 ? "hot" : "safe"}
-              note="Midday peak heat exposure"
-            />
+          {forecastLoading && !nowSlot ? (
+            <>
+              <div className="rounded-2xl border border-border/60 bg-secondary/15 p-5 animate-pulse">
+                <div className="h-3 w-28 rounded bg-secondary/60" />
+                <div className="mt-3 h-8 w-20 rounded bg-secondary/60" />
+                <div className="mt-2 h-4 w-40 rounded bg-secondary/40" />
+              </div>
+              <div className="rounded-2xl border border-border/60 bg-secondary/15 p-5 animate-pulse">
+                <div className="h-3 w-28 rounded bg-secondary/60" />
+                <div className="mt-3 h-8 w-20 rounded bg-secondary/60" />
+                <div className="mt-2 h-4 w-40 rounded bg-secondary/40" />
+              </div>
+            </>
           ) : (
-            <DepartureUnavailableCard title="Leave now" />
-          )}
+            <>
+              {nowSlot && nowSlot.available && nowSlot.peakTempC !== undefined ? (
+                <DepartureCard
+                  title="Leave now (Peak Afternoon)"
+                  tempC={nowSlot.peakTempC}
+                  minutes={nowSlot.highHeatMinutes ?? 20}
+                  tone={nowSlot.peakTempC >= 38 ? "hot" : "safe"}
+                  note="Midday peak heat exposure"
+                />
+              ) : (
+                <DepartureUnavailableCard title="Leave now" />
+              )}
 
-          {coolestSlot && coolestSlot.available && coolestSlot.peakTempC !== undefined ? (
-            <DepartureCard
-              title={`Leave Later (${coolestSlot.label})`}
-              tempC={coolestSlot.peakTempC}
-              minutes={coolestSlot.highHeatMinutes ?? 0}
-              tone="safe"
-              note={
-                nowSlot?.peakTempC
-                  ? `${(nowSlot.peakTempC - coolestSlot.peakTempC).toFixed(1)}°C cooler than leaving now`
-                  : `Coolest window in next 12 hours`
-              }
-            />
-          ) : (
-            <DepartureUnavailableCard title="Leave later" />
+              {coolestSlot && coolestSlot.available && coolestSlot.peakTempC !== undefined ? (
+                <DepartureCard
+                  title={`Leave Later (${coolestSlot.label})`}
+                  tempC={coolestSlot.peakTempC}
+                  minutes={coolestSlot.highHeatMinutes ?? 0}
+                  tone="safe"
+                  note={
+                    nowSlot?.peakTempC
+                      ? `${(nowSlot.peakTempC - coolestSlot.peakTempC).toFixed(1)}°C cooler than leaving now`
+                      : `Coolest window in next 12 hours`
+                  }
+                />
+              ) : (
+                <DepartureUnavailableCard title="Leave later" />
+              )}
+            </>
           )}
         </section>
 

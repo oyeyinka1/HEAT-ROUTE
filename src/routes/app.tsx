@@ -244,9 +244,19 @@ function HeatRouteApp() {
     async function computeRoutesWithHeatmap() {
       try {
         setRouteError(null);
-        const dirRes = await getWalkingRoutes({ data: { start: originCoord!, end: destinationCoord! } });
+
+        // Fetch walking routes from ORS and FortyGuard heatmap in parallel
+        const [dirRes, heatRes] = await Promise.all([
+          getWalkingRoutes({ data: { start: originCoord!, end: destinationCoord! } }),
+          getTemperatureHeatmap({ data: { routesCoordinates: [[originCoord!, destinationCoord!]] } }).catch((err) => {
+            console.warn("[Analysis] Heatmap retrieval fallback:", err);
+            return null;
+          }),
+        ]);
+
         if (cancelled) return;
         if (dirRes.source) setRoutingSource(dirRes.source);
+        if (heatRes?.source) setThermalSource(heatRes.source);
 
         if (dirRes.error || !dirRes.routes || dirRes.routes.length === 0) {
           console.info("[Analysis] No walking routes returned:", dirRes.error);
@@ -256,80 +266,86 @@ function HeatRouteApp() {
           return;
         }
 
-        const coordsList = dirRes.routes?.map((r) => r.coordinates) || [];
         let currentTiles = thermalTiles;
-
-        if (coordsList.length > 0) {
-          try {
-            const heatRes = await getTemperatureHeatmap({ data: { routesCoordinates: coordsList } });
-            if (cancelled) return;
-            if (heatRes.source) setThermalSource(heatRes.source);
-            if (heatRes.tiles && heatRes.tiles.length > 0) {
-              currentTiles = heatRes.tiles;
-              setThermalTiles(heatRes.tiles);
-            }
-          } catch (err) {
-            console.warn("[Analysis] Heatmap retrieval fallback:", err);
-          }
+        if (heatRes?.tiles && heatRes.tiles.length > 0) {
+          currentTiles = heatRes.tiles;
+          setThermalTiles(heatRes.tiles);
         }
 
         if (dirRes.routes && dirRes.routes.length > 0) {
-          setRoutes((prev) => {
-            const baseList = prev.length > 0 ? prev : routeAnalysis.routes;
-            const scored = baseList.map((r, i) => {
-              const fetched = dirRes.routes[i] ?? dirRes.routes[0]!;
-              const durationMin = fetched.durationSeconds
-                ? Math.round(fetched.durationSeconds / 60)
-                : r.metrics.durationMin;
-              const distanceKm = fetched.distanceMeters
-                ? Number((fetched.distanceMeters / 1000).toFixed(1))
-                : r.metrics.distanceKm;
+          const scored: RouteOption[] = dirRes.routes.map((fetched, i) => {
+            const isAlt = i > 0;
+            const durationMin = fetched.durationSeconds
+              ? Math.round(fetched.durationSeconds / 60)
+              : 20;
+            const distanceKm = fetched.distanceMeters
+              ? Number((fetched.distanceMeters / 1000).toFixed(1))
+              : 1.5;
 
-              const thermal = calculateRouteThermalMetrics(fetched.coordinates, durationMin, currentTiles);
+            const thermal = calculateRouteThermalMetrics(fetched.coordinates, durationMin, currentTiles);
 
-              return {
-                ...r,
-                geometry: fetched.coordinates,
-                steps: fetched.steps ?? r.steps,
-                metrics: {
-                  ...r.metrics,
-                  durationMin,
-                  distanceKm,
-                  peakTempC: thermal.peakTempC,
-                  avgTempC: thermal.avgTempC,
-                  highHeatMinutes: thermal.highHeatMinutes,
-                },
-              };
-            });
-            // Save the analyzed route for Heat Intelligence page
-            if (dirRes.routes[0]?.coordinates) {
-              try {
-                const routePayload = {
-                  destination: destination || query || "Searched Walk",
-                  origin: originLabel || originQuery || "Start Location",
-                  coordinates: dirRes.routes[0].coordinates,
-                  durationMin: Math.round((dirRes.routes[0].durationSeconds ?? 1200) / 60),
-                  distanceKm: Number(((dirRes.routes[0].distanceMeters ?? 1500) / 1000).toFixed(1)),
-                };
-                sessionStorage.setItem("heatroute_last_analyzed", JSON.stringify(routePayload));
-
-                // Pre-warm forecast in the background
-                getRouteForecast({
-                  data: {
-                    routeCoordinates: dirRes.routes[0].coordinates,
-                    durationMin: routePayload.durationMin,
-                  },
-                }).then((res) => {
-                  try {
-                    sessionStorage.setItem("heatroute_prewarmed_forecast", JSON.stringify(res));
-                  } catch {}
-                }).catch((e) => console.warn("[Forecast Pre-warm] Background fetch notice:", e));
-              } catch {}
-            }
-
-            // Stage 5: re-run selection after every metric refresh
-            return applyRecommendation(scored);
+            return {
+              id: isAlt ? "r-direct" : "r-heat-safe",
+              kind: (isAlt ? "direct" : "heat-safe") as RouteOption["kind"],
+              label: isAlt ? "Direct Route" : "Heat-Safe",
+              geometry: fetched.coordinates,
+              steps: fetched.steps ?? [],
+              recommended: !isAlt,
+              metrics: {
+                durationMin,
+                distanceKm,
+                peakTempC: thermal.peakTempC,
+                avgTempC: thermal.avgTempC,
+                highHeatMinutes: thermal.highHeatMinutes,
+              },
+            };
           });
+
+          // Stage 5: apply recommendation logic
+          const recommendedRoutes = applyRecommendation(scored);
+          setRoutes(recommendedRoutes);
+
+          // Save the analyzed route & thermal tiles for Heat Intelligence page
+          if (dirRes.routes[0]?.coordinates) {
+            try {
+              // Build a fingerprint from start+end coords so Heat Intelligence knows when the route changed
+              const routeKey = [
+                originCoord![0].toFixed(4),
+                originCoord![1].toFixed(4),
+                destinationCoord![0].toFixed(4),
+                destinationCoord![1].toFixed(4),
+              ].join(",");
+
+              const routePayload = {
+                routeKey,
+                destination: destination || query || "Searched Walk",
+                origin: originLabel || originQuery || "Start Location",
+                coordinates: dirRes.routes[0].coordinates,
+                durationMin: Math.round((dirRes.routes[0].durationSeconds ?? 1200) / 60),
+                distanceKm: Number(((dirRes.routes[0].distanceMeters ?? 1500) / 1000).toFixed(1)),
+                tiles: currentTiles,
+                metrics: recommendedRoutes[0]?.metrics,
+              };
+              sessionStorage.setItem("heatroute_last_analyzed", JSON.stringify(routePayload));
+
+              // Always clear the old prewarmed forecast so Heat Intelligence fetches fresh data for this route
+              sessionStorage.removeItem("heatroute_prewarmed_forecast");
+
+              // Pre-warm the forecast for the new route in the background
+              getRouteForecast({
+                data: {
+                  routeCoordinates: dirRes.routes[0].coordinates,
+                  durationMin: routePayload.durationMin,
+                  currentTiles: routePayload.tiles,
+                },
+              }).then((res) => {
+                try {
+                  // Tag the forecast with the same routeKey so we can validate freshness later
+                  sessionStorage.setItem("heatroute_prewarmed_forecast", JSON.stringify({ ...res, routeKey }));
+                } catch {}
+              }).catch((e) => console.warn("[Forecast Pre-warm] Background fetch notice:", e));
+            } catch {}
+          }
         }
       } catch (err) {
         console.error("Failed to compute routes & temperatures:", err);

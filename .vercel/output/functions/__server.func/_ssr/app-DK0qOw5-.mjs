@@ -3,12 +3,12 @@ import { h as Link } from "../_libs/@tanstack/react-router+[...].mjs";
 import { c as createServerFn } from "./createServerFn-CIHAFgYl.mjs";
 import { f as require_react } from "../_libs/@react-leaflet/core+[...].mjs";
 import { n as require_jsx_runtime } from "../_libs/react+tanstack__react-query.mjs";
-import { t as Route } from "./app-B4Hs2uGh.mjs";
+import { t as Route } from "./app-CAUl0JcA.mjs";
 import { a as routeAnalysis, i as routeAccent, n as fastestGeometryCoords, r as navSteps, t as analysisStages } from "./heatroute-data-ClpyG0yJ.mjs";
-import { a as tupleType, i as stringType, n as numberType, r as objectType } from "../_libs/zod.mjs";
-import { a as getCoolerRerouteData, i as createSsrRpc, n as ThermalMap, o as getRouteForecast, r as calculateRouteThermalMetrics, s as getTemperatureHeatmap, t as ThermalLegend } from "./fortyguard-BUEdrfTf.mjs";
+import { a as stringType, i as objectType, o as tupleType, r as numberType } from "../_libs/zod.mjs";
+import { a as getCoolerRerouteData, i as createSsrRpc, n as ThermalMap, o as getRouteForecast, r as calculateRouteThermalMetrics, s as getTemperatureHeatmap, t as ThermalLegend } from "./fortyguard-DdQO2_QR.mjs";
 import { C as Check, S as ChevronRight, T as ArrowLeft, _ as Footprints, a as Thermometer, b as Clock, d as Navigation, g as Layers, h as LoaderCircle, l as Search, m as LocateFixed, p as MapPin, r as TriangleAlert, s as Sparkles, t as X, v as Flame, w as ArrowRight } from "../_libs/lucide-react.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/app-BKJCSLlT.js
+//#region node_modules/.nitro/vite/services/ssr/assets/app-DK0qOw5-.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 function RouteCard({ route, selected, onSelect, isNearTie = false }) {
@@ -313,12 +313,16 @@ function HeatRouteApp() {
 		async function computeRoutesWithHeatmap() {
 			try {
 				setRouteError(null);
-				const dirRes = await getWalkingRoutes({ data: {
+				const [dirRes, heatRes] = await Promise.all([getWalkingRoutes({ data: {
 					start: originCoord,
 					end: destinationCoord
-				} });
+				} }), getTemperatureHeatmap({ data: { routesCoordinates: [[originCoord, destinationCoord]] } }).catch((err) => {
+					console.warn("[Analysis] Heatmap retrieval fallback:", err);
+					return null;
+				})]);
 				if (cancelled) return;
 				if (dirRes.source) setRoutingSource(dirRes.source);
+				if (heatRes?.source) setThermalSource(heatRes.source);
 				if (dirRes.error || !dirRes.routes || dirRes.routes.length === 0) {
 					console.info("[Analysis] No walking routes returned:", dirRes.error);
 					setRoutes([]);
@@ -326,31 +330,25 @@ function HeatRouteApp() {
 					setRouteError(dirRes.error || "No walking route found — destination is too far to walk.");
 					return;
 				}
-				const coordsList = dirRes.routes?.map((r) => r.coordinates) || [];
 				let currentTiles = thermalTiles;
-				if (coordsList.length > 0) try {
-					const heatRes = await getTemperatureHeatmap({ data: { routesCoordinates: coordsList } });
-					if (cancelled) return;
-					if (heatRes.source) setThermalSource(heatRes.source);
-					if (heatRes.tiles && heatRes.tiles.length > 0) {
-						currentTiles = heatRes.tiles;
-						setThermalTiles(heatRes.tiles);
-					}
-				} catch (err) {
-					console.warn("[Analysis] Heatmap retrieval fallback:", err);
+				if (heatRes?.tiles && heatRes.tiles.length > 0) {
+					currentTiles = heatRes.tiles;
+					setThermalTiles(heatRes.tiles);
 				}
-				if (dirRes.routes && dirRes.routes.length > 0) setRoutes((prev) => {
-					const scored = (prev.length > 0 ? prev : routeAnalysis.routes).map((r, i) => {
-						const fetched = dirRes.routes[i] ?? dirRes.routes[0];
-						const durationMin = fetched.durationSeconds ? Math.round(fetched.durationSeconds / 60) : r.metrics.durationMin;
-						const distanceKm = fetched.distanceMeters ? Number((fetched.distanceMeters / 1e3).toFixed(1)) : r.metrics.distanceKm;
+				if (dirRes.routes && dirRes.routes.length > 0) {
+					const recommendedRoutes = applyRecommendation(dirRes.routes.map((fetched, i) => {
+						const isAlt = i > 0;
+						const durationMin = fetched.durationSeconds ? Math.round(fetched.durationSeconds / 60) : 20;
+						const distanceKm = fetched.distanceMeters ? Number((fetched.distanceMeters / 1e3).toFixed(1)) : 1.5;
 						const thermal = calculateRouteThermalMetrics(fetched.coordinates, durationMin, currentTiles);
 						return {
-							...r,
+							id: isAlt ? "r-direct" : "r-heat-safe",
+							kind: isAlt ? "direct" : "heat-safe",
+							label: isAlt ? "Direct Route" : "Heat-Safe",
 							geometry: fetched.coordinates,
-							steps: fetched.steps ?? r.steps,
+							steps: fetched.steps ?? [],
+							recommended: !isAlt,
 							metrics: {
-								...r.metrics,
 								durationMin,
 								distanceKm,
 								peakTempC: thermal.peakTempC,
@@ -358,27 +356,41 @@ function HeatRouteApp() {
 								highHeatMinutes: thermal.highHeatMinutes
 							}
 						};
-					});
+					}));
+					setRoutes(recommendedRoutes);
 					if (dirRes.routes[0]?.coordinates) try {
+						const routeKey = [
+							originCoord[0].toFixed(4),
+							originCoord[1].toFixed(4),
+							destinationCoord[0].toFixed(4),
+							destinationCoord[1].toFixed(4)
+						].join(",");
 						const routePayload = {
+							routeKey,
 							destination: destination || query || "Searched Walk",
 							origin: originLabel || originQuery || "Start Location",
 							coordinates: dirRes.routes[0].coordinates,
 							durationMin: Math.round((dirRes.routes[0].durationSeconds ?? 1200) / 60),
-							distanceKm: Number(((dirRes.routes[0].distanceMeters ?? 1500) / 1e3).toFixed(1))
+							distanceKm: Number(((dirRes.routes[0].distanceMeters ?? 1500) / 1e3).toFixed(1)),
+							tiles: currentTiles,
+							metrics: recommendedRoutes[0]?.metrics
 						};
 						sessionStorage.setItem("heatroute_last_analyzed", JSON.stringify(routePayload));
+						sessionStorage.removeItem("heatroute_prewarmed_forecast");
 						getRouteForecast({ data: {
 							routeCoordinates: dirRes.routes[0].coordinates,
-							durationMin: routePayload.durationMin
+							durationMin: routePayload.durationMin,
+							currentTiles: routePayload.tiles
 						} }).then((res) => {
 							try {
-								sessionStorage.setItem("heatroute_prewarmed_forecast", JSON.stringify(res));
+								sessionStorage.setItem("heatroute_prewarmed_forecast", JSON.stringify({
+									...res,
+									routeKey
+								}));
 							} catch {}
 						}).catch((e) => console.warn("[Forecast Pre-warm] Background fetch notice:", e));
 					} catch {}
-					return applyRecommendation(scored);
-				});
+				}
 			} catch (err) {
 				console.error("Failed to compute routes & temperatures:", err);
 				setRoutes([]);

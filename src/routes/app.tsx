@@ -287,7 +287,7 @@ function HeatRouteApp() {
             return {
               id: isAlt ? "r-direct" : "r-heat-safe",
               kind: (isAlt ? "direct" : "heat-safe") as RouteOption["kind"],
-              label: isAlt ? "Direct Route" : "Heat-Safe",
+              label: isAlt ? "Fastest Route" : "Heat-Safe",
               geometry: fetched.coordinates,
               steps: fetched.steps ?? [],
               recommended: !isAlt,

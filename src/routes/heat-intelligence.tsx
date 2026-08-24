@@ -191,11 +191,13 @@ function HeatIntelligence() {
 
   const availableSlots = slots.filter((s) => s.available && s.peakTempC !== undefined);
   const nowSlot = slots.find((s) => s.offsetHours === 0) || slots[0];
-  const coolestSlot =
-    forecastResult?.coolestSlot ||
-    (availableSlots.length > 0
-      ? [...availableSlots].sort((a, b) => a.peakTempC! - b.peakTempC!)[0]
-      : undefined);
+  const futureSlots = availableSlots.filter((s) => s.offsetHours > 0);
+  const coolestLaterSlot =
+    forecastResult?.coolestSlot && forecastResult.coolestSlot.offsetHours > 0
+      ? forecastResult.coolestSlot
+      : (futureSlots.length > 0
+          ? [...futureSlots].sort((a, b) => a.peakTempC! - b.peakTempC!)[0]
+          : undefined);
 
   const currentTemp = nowSlot?.peakTempC ?? routeContext?.metrics?.peakTempC ?? 26.0;
   const currentHighHeat = nowSlot?.highHeatMinutes ?? routeContext?.metrics?.highHeatMinutes ?? 0;
@@ -490,26 +492,34 @@ function HeatIntelligence() {
             <>
               {nowSlot && nowSlot.available && nowSlot.peakTempC !== undefined ? (
                 <DepartureCard
-                  title="Leave now (Peak Afternoon)"
+                  title={`Leave now (${nowSlot.label})`}
                   tempC={nowSlot.peakTempC}
-                  minutes={nowSlot.highHeatMinutes ?? 20}
-                  tone={nowSlot.peakTempC >= 38 ? "hot" : "safe"}
-                  note="Midday peak heat exposure"
+                  minutes={nowSlot.highHeatMinutes ?? 0}
+                  tone={nowSlot.peakTempC >= highHeatThresholdC ? "hot" : "safe"}
+                  note={
+                    nowSlot.peakTempC >= highHeatThresholdC
+                      ? "High heat exposure along route — check future windows"
+                      : "Comfortable thermal conditions"
+                  }
                 />
               ) : (
                 <DepartureUnavailableCard title="Leave now" />
               )}
 
-              {coolestSlot && coolestSlot.available && coolestSlot.peakTempC !== undefined ? (
+              {coolestLaterSlot && coolestLaterSlot.available && coolestLaterSlot.peakTempC !== undefined ? (
                 <DepartureCard
-                  title={`Leave Later (${coolestSlot.label})`}
-                  tempC={coolestSlot.peakTempC}
-                  minutes={coolestSlot.highHeatMinutes ?? 0}
-                  tone="safe"
+                  title={`Leave Later (${coolestLaterSlot.label})`}
+                  tempC={coolestLaterSlot.peakTempC}
+                  minutes={coolestLaterSlot.highHeatMinutes ?? 0}
+                  tone={coolestLaterSlot.peakTempC >= highHeatThresholdC ? "hot" : "safe"}
                   note={
-                    nowSlot?.peakTempC
-                      ? `${(nowSlot.peakTempC - coolestSlot.peakTempC).toFixed(1)}°C cooler than leaving now`
-                      : `Coolest window in next 12 hours`
+                    nowSlot?.peakTempC !== undefined
+                      ? nowSlot.peakTempC > coolestLaterSlot.peakTempC
+                        ? `${(nowSlot.peakTempC - coolestLaterSlot.peakTempC).toFixed(1)}°C cooler than leaving now`
+                        : nowSlot.peakTempC < coolestLaterSlot.peakTempC
+                          ? `${(coolestLaterSlot.peakTempC - nowSlot.peakTempC).toFixed(1)}°C warmer than leaving now (midday peak)`
+                          : `Same temperature as leaving now`
+                      : `Coolest departure window in next 12 hours`
                   }
                 />
               ) : (

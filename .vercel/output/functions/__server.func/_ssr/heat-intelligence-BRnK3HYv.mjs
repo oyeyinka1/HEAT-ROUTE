@@ -2,9 +2,9 @@ import { r as __toESM } from "../_runtime.mjs";
 import { h as Link } from "../_libs/@tanstack/react-router+[...].mjs";
 import { f as require_react } from "../_libs/@react-leaflet/core+[...].mjs";
 import { n as require_jsx_runtime } from "../_libs/react+tanstack__react-query.mjs";
-import { n as ThermalMap, o as getRouteForecast, t as ThermalLegend } from "./fortyguard-DdQO2_QR.mjs";
+import { n as ThermalMap, o as getRouteForecast, t as ThermalLegend } from "./fortyguard-B6mzZsho.mjs";
 import { T as ArrowLeft, a as Thermometer, b as Clock, h as LoaderCircle, n as Wind, o as Sun, v as Flame, w as ArrowRight, x as CircleAlert, y as Compass } from "../_libs/lucide-react.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/heat-intelligence-e3ZCUWrP.js
+//#region node_modules/.nitro/vite/services/ssr/assets/heat-intelligence-BRnK3HYv.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 function HeatIntelligence() {
@@ -107,7 +107,8 @@ function HeatIntelligence() {
 	const tiles = forecastResult?.tiles && forecastResult.tiles.length > 0 ? forecastResult.tiles : routeContext?.tiles || [];
 	const availableSlots = slots.filter((s) => s.available && s.peakTempC !== void 0);
 	const nowSlot = slots.find((s) => s.offsetHours === 0) || slots[0];
-	const coolestSlot = forecastResult?.coolestSlot || (availableSlots.length > 0 ? [...availableSlots].sort((a, b) => a.peakTempC - b.peakTempC)[0] : void 0);
+	const futureSlots = availableSlots.filter((s) => s.offsetHours > 0);
+	const coolestLaterSlot = forecastResult?.coolestSlot && forecastResult.coolestSlot.offsetHours > 0 ? forecastResult.coolestSlot : futureSlots.length > 0 ? [...futureSlots].sort((a, b) => a.peakTempC - b.peakTempC)[0] : void 0;
 	const currentTemp = nowSlot?.peakTempC ?? routeContext?.metrics?.peakTempC ?? 26;
 	const currentHighHeat = nowSlot?.highHeatMinutes ?? routeContext?.metrics?.highHeatMinutes ?? 0;
 	const activePoint = slots[selected] || slots[0];
@@ -415,17 +416,17 @@ function HeatIntelligence() {
 							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "mt-2 h-4 w-40 rounded bg-secondary/40" })
 						]
 					})] }) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [nowSlot && nowSlot.available && nowSlot.peakTempC !== void 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(DepartureCard, {
-						title: "Leave now (Peak Afternoon)",
+						title: `Leave now (${nowSlot.label})`,
 						tempC: nowSlot.peakTempC,
-						minutes: nowSlot.highHeatMinutes ?? 20,
-						tone: nowSlot.peakTempC >= 38 ? "hot" : "safe",
-						note: "Midday peak heat exposure"
-					}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)(DepartureUnavailableCard, { title: "Leave now" }), coolestSlot && coolestSlot.available && coolestSlot.peakTempC !== void 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(DepartureCard, {
-						title: `Leave Later (${coolestSlot.label})`,
-						tempC: coolestSlot.peakTempC,
-						minutes: coolestSlot.highHeatMinutes ?? 0,
-						tone: "safe",
-						note: nowSlot?.peakTempC ? `${(nowSlot.peakTempC - coolestSlot.peakTempC).toFixed(1)}°C cooler than leaving now` : `Coolest window in next 12 hours`
+						minutes: nowSlot.highHeatMinutes ?? 0,
+						tone: nowSlot.peakTempC >= 36 ? "hot" : "safe",
+						note: nowSlot.peakTempC >= 36 ? "High heat exposure along route — check future windows" : "Comfortable thermal conditions"
+					}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)(DepartureUnavailableCard, { title: "Leave now" }), coolestLaterSlot && coolestLaterSlot.available && coolestLaterSlot.peakTempC !== void 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(DepartureCard, {
+						title: `Leave Later (${coolestLaterSlot.label})`,
+						tempC: coolestLaterSlot.peakTempC,
+						minutes: coolestLaterSlot.highHeatMinutes ?? 0,
+						tone: coolestLaterSlot.peakTempC >= 36 ? "hot" : "safe",
+						note: nowSlot?.peakTempC !== void 0 ? nowSlot.peakTempC > coolestLaterSlot.peakTempC ? `${(nowSlot.peakTempC - coolestLaterSlot.peakTempC).toFixed(1)}°C cooler than leaving now` : nowSlot.peakTempC < coolestLaterSlot.peakTempC ? `${(coolestLaterSlot.peakTempC - nowSlot.peakTempC).toFixed(1)}°C warmer than leaving now (midday peak)` : `Same temperature as leaving now` : `Coolest departure window in next 12 hours`
 					}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)(DepartureUnavailableCard, { title: "Leave later" })] })
 				})
 			] }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Link, {

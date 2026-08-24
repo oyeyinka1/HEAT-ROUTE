@@ -3,12 +3,12 @@ import { h as Link } from "../_libs/@tanstack/react-router+[...].mjs";
 import { c as createServerFn } from "./createServerFn-CIHAFgYl.mjs";
 import { f as require_react } from "../_libs/@react-leaflet/core+[...].mjs";
 import { n as require_jsx_runtime } from "../_libs/react+tanstack__react-query.mjs";
-import { t as Route } from "./app-CAUl0JcA.mjs";
+import { t as Route } from "./app-B72BJIU4.mjs";
 import { a as routeAnalysis, i as routeAccent, n as fastestGeometryCoords, r as navSteps, t as analysisStages } from "./heatroute-data-ClpyG0yJ.mjs";
 import { a as stringType, i as objectType, o as tupleType, r as numberType } from "../_libs/zod.mjs";
-import { a as getCoolerRerouteData, i as createSsrRpc, n as ThermalMap, o as getRouteForecast, r as calculateRouteThermalMetrics, s as getTemperatureHeatmap, t as ThermalLegend } from "./fortyguard-DdQO2_QR.mjs";
+import { a as getCoolerRerouteData, i as createSsrRpc, n as ThermalMap, o as getRouteForecast, r as calculateRouteThermalMetrics, s as getTemperatureHeatmap, t as ThermalLegend } from "./fortyguard-B6mzZsho.mjs";
 import { C as Check, S as ChevronRight, T as ArrowLeft, _ as Footprints, a as Thermometer, b as Clock, d as Navigation, g as Layers, h as LoaderCircle, l as Search, m as LocateFixed, p as MapPin, r as TriangleAlert, s as Sparkles, t as X, v as Flame, w as ArrowRight } from "../_libs/lucide-react.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/app-DK0qOw5-.js
+//#region node_modules/.nitro/vite/services/ssr/assets/app-B_BtzJIa.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 function RouteCard({ route, selected, onSelect, isNearTie = false }) {

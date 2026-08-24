@@ -903,12 +903,18 @@ export const getRouteForecast = createServerFn({ method: "POST" })
     const nowTiles = slotResults.find((r) => r.tiles && r.tiles.length > 0)?.tiles || passedTiles;
 
     const availableSlots = computedSlots.filter((s) => s.available && s.peakTempC !== undefined);
+    const futureSlots = availableSlots.filter((s) => s.offsetHours > 0);
     let coolestSlot: ForecastSlot | undefined;
     let hottestSlot: ForecastSlot | undefined;
 
+    if (futureSlots.length > 0) {
+      coolestSlot = [...futureSlots].sort((a, b) => a.peakTempC! - b.peakTempC!)[0];
+    } else if (availableSlots.length > 1) {
+      coolestSlot = availableSlots[1];
+    }
+
     if (availableSlots.length > 0) {
-      coolestSlot = [...availableSlots].sort((a, b) => (a.peakTempC! - b.peakTempC!))[0];
-      hottestSlot = [...availableSlots].sort((a, b) => (b.peakTempC! - a.peakTempC!))[0];
+      hottestSlot = [...availableSlots].sort((a, b) => b.peakTempC! - a.peakTempC!)[0];
     }
 
     return {

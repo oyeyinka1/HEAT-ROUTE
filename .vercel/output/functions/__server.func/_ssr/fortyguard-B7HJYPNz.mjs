@@ -3,7 +3,7 @@ import { i as objectType, n as arrayType, o as tupleType, r as numberType, t as 
 import { t as createServerRpc } from "./createServerRpc-B90ckaqP.mjs";
 import * as fs from "node:fs";
 import * as path from "node:path";
-//#region node_modules/.nitro/vite/services/ssr/assets/fortyguard-B1Rhb-ya.js
+//#region node_modules/.nitro/vite/services/ssr/assets/fortyguard-B7HJYPNz.js
 var CACHE_DIR = path.resolve(process.cwd(), ".cache");
 var CACHE_FILE = path.join(CACHE_DIR, "fortyguard_tiles_cache.json");
 var HIGH_HEAT_THRESHOLD_C = 38;
@@ -724,12 +724,12 @@ var getRouteForecast = createServerFn({ method: "POST" }).validator(objectType({
 	const computedSlots = slotResults.map((r) => r.slot);
 	const nowTiles = slotResults.find((r) => r.tiles && r.tiles.length > 0)?.tiles || passedTiles;
 	const availableSlots = computedSlots.filter((s) => s.available && s.peakTempC !== void 0);
+	const futureSlots = availableSlots.filter((s) => s.offsetHours > 0);
 	let coolestSlot;
 	let hottestSlot;
-	if (availableSlots.length > 0) {
-		coolestSlot = [...availableSlots].sort((a, b) => a.peakTempC - b.peakTempC)[0];
-		hottestSlot = [...availableSlots].sort((a, b) => b.peakTempC - a.peakTempC)[0];
-	}
+	if (futureSlots.length > 0) coolestSlot = [...futureSlots].sort((a, b) => a.peakTempC - b.peakTempC)[0];
+	else if (availableSlots.length > 1) coolestSlot = availableSlots[1];
+	if (availableSlots.length > 0) hottestSlot = [...availableSlots].sort((a, b) => b.peakTempC - a.peakTempC)[0];
 	return {
 		source: "FortyGuard Forecast Live",
 		slots: computedSlots,

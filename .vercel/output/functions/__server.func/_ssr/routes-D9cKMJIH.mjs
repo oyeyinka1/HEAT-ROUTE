@@ -1,5 +1,5 @@
-import { h as Link } from "../_libs/@tanstack/react-router+[...].mjs";
 import { n as require_jsx_runtime } from "../_libs/react+tanstack__react-query.mjs";
+import { h as Link } from "../_libs/@tanstack/react-router+[...].mjs";
 import { a as routeAnalysis } from "./heatroute-data-ClpyG0yJ.mjs";
 import { _ as Footprints, a as Thermometer, c as ShieldCheck, f as MapPinned, i as Timer, u as Route, v as Flame, w as ArrowRight } from "../_libs/lucide-react.mjs";
 //#region node_modules/.nitro/vite/services/ssr/assets/routes-D9cKMJIH.js

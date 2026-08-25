@@ -19,10 +19,8 @@ import {
   X,
 } from "lucide-react";
 import { RouteCard } from "@/components/heatroute/RouteCard";
-import { ThermalLegend } from "@/components/heatroute/ThermalMap";
-const ThermalMap = lazy(() =>
-  import("@/components/heatroute/ThermalMap").then((m) => ({ default: m.ThermalMap })),
-);
+import { ThermalLegend } from "@/components/heatroute/ThermalLegend";
+const ThermalMap = lazy(() => import("@/components/heatroute/ThermalMap"));
 import {
   analysisStages,
   navSteps,

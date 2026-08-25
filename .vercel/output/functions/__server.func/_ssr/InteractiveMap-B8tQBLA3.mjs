@@ -1,30 +1,8 @@
-import { i as __toESM, n as __exportAll$1 } from "../_runtime.mjs";
-import { t as getServerFnById } from "../__23tanstack-start-server-fn-resolver-CWJmh1BE.mjs";
-import { c as createServerFn, i as TSS_SERVER_FUNCTION } from "./createServerFn-CIHAFgYl.mjs";
-import { S as require_react } from "../_libs/@react-leaflet/core+[...].mjs";
-import { n as require_jsx_runtime } from "../_libs/react+tanstack__react-query.mjs";
-import { i as objectType, n as arrayType, o as tupleType, r as numberType, t as anyType } from "../_libs/zod.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/fortyguard-CwlHdn3s.js
-var fortyguard_CwlHdn3s_exports = /* @__PURE__ */ __exportAll$1({
-	a: () => ThermalLegend,
-	i: () => createSsrRpc,
-	n: () => getRouteForecast,
-	o: () => ThermalMap_exports,
-	r: () => getTemperatureHeatmap,
-	t: () => getCoolerRerouteData
-});
+import { r as __toESM } from "../_runtime.mjs";
+import { n as require_jsx_runtime, r as require_react } from "../_libs/react+tanstack__react-query.mjs";
+//#region node_modules/.nitro/vite/services/ssr/assets/InteractiveMap-B8tQBLA3.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
-var __defProp = Object.defineProperty;
-var __exportAll = (all, no_symbols) => {
-	let target = {};
-	for (var name in all) __defProp(target, name, {
-		get: all[name],
-		enumerable: true
-	});
-	if (!no_symbols) __defProp(target, Symbol.toStringTag, { value: "Module" });
-	return target;
-};
 var DEFAULT_MAP_CENTER = [39.8283, -98.5795];
 var DEFAULT_ZOOM = 4;
 function getTileColor(tempC) {
@@ -213,9 +191,15 @@ function ClientMap({ routes, activeRouteId, onSelectRoute, progress, dim = false
 function InteractiveMap(props) {
 	const [libs, setLibs] = (0, import_react.useState)(null);
 	(0, import_react.useEffect)(() => {
-		Promise.all([import("../_libs/@react-leaflet/core+[...].mjs").then((n) => /* @__PURE__ */ __toESM(n.b())), import("../_libs/react-leaflet.mjs").then((n) => n.t)]).then(([L, RL]) => {
+		Promise.all([import(
+			/* @vite-ignore */
+			"leaflet"
+), import(
+			/* @vite-ignore */
+			"react-leaflet"
+)]).then(([L, RL]) => {
 			setLibs({
-				L,
+				L: L.default || L,
 				RL
 			});
 		});
@@ -233,63 +217,5 @@ function InteractiveMap(props) {
 		RL: libs.RL
 	});
 }
-var ThermalMap_exports = /* @__PURE__ */ __exportAll({
-	ThermalLegend: () => ThermalLegend,
-	ThermalMap: () => ThermalMap
-});
-function ThermalMap(props) {
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(InteractiveMap, { ...props });
-}
-function ThermalLegend({ className = "" }) {
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		className: `glass-panel flex items-center gap-3 rounded-full px-4 py-2 ${className}`,
-		children: [
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-				className: "label-xs",
-				children: "Cooler"
-			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "thermal-bar h-1.5 w-24 rounded-full sm:w-36" }),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-				className: "label-xs",
-				children: "Hotter"
-			})
-		]
-	});
-}
-var createSsrRpc = (functionId) => {
-	const url = "/_serverFn/" + functionId;
-	const serverFnMeta = { id: functionId };
-	const fn = async (...args) => {
-		return (await getServerFnById(functionId, { origin: "server" }))(...args);
-	};
-	return Object.assign(fn, {
-		url,
-		serverFnMeta,
-		[TSS_SERVER_FUNCTION]: true
-	});
-};
-/**
-* Server function to fetch and cache FortyGuard temperature tiles for a set of routes
-*/
-var getTemperatureHeatmap = createServerFn({ method: "POST" }).validator(objectType({ routesCoordinates: arrayType(arrayType(tupleType([numberType(), numberType()]))) })).handler(createSsrRpc("18953c3e96f1fbcf3e2ef03dd924a79576ec1301eb37c15083e132c1cdc5565e"));
-/**
-* Server function to fetch real FortyGuard 12-hour forecast at 5 time offsets:
-* Now (+0h), +3h, +6h, +9h, +12h.
-*/
-var getRouteForecast = createServerFn({ method: "POST" }).validator(objectType({
-	routeCoordinates: arrayType(tupleType([numberType(), numberType()])),
-	durationMin: numberType().default(20),
-	currentTiles: arrayType(anyType()).optional()
-})).handler(createSsrRpc("a6f30602e4362437b274a3a6b2c7fe6920610c50e043e40cc2c8b1c3f9b6eac6"));
-/**
-* Server function to fetch real cooler route thermal metrics and tiles
-* (using the real forecast data for the active route's actual coordinates) for the simulated condition change.
-*/
-var getCoolerRerouteData = createServerFn({ method: "POST" }).validator(objectType({
-	routeCoordinates: arrayType(tupleType([numberType(), numberType()])),
-	durationMin: numberType().default(21),
-	currentPeakTempC: numberType().optional(),
-	currentHighHeatMinutes: numberType().optional()
-})).handler(createSsrRpc("7773f1b38864253439cd185d954a1108c5027a663acc3c7021b9711e8aafa1ed"));
 //#endregion
-export { getRouteForecast as a, getCoolerRerouteData as i, createSsrRpc as n, getTemperatureHeatmap as o, fortyguard_CwlHdn3s_exports as r, ThermalLegend as t };
+export { InteractiveMap };

@@ -1,3 +1,18 @@
+// Polyfill browser globals that some bundled dependencies (TanStack Router, Leaflet)
+// reference at module-evaluation time in the Nitro/Vercel serverless environment.
+// Must be the very first thing that executes in the server bundle.
+if (typeof self === "undefined") {
+  // @ts-expect-error — deliberate global assignment for SSR compatibility
+  globalThis.self = globalThis;
+}
+if (typeof window === "undefined") {
+  // Minimal window shim — only what Leaflet's module-level code needs to not throw.
+  // Leaflet itself is dynamically imported client-side; this just prevents a
+  // ReferenceError if it somehow ends up evaluated on the server.
+  // @ts-expect-error — deliberate global assignment for SSR compatibility
+  globalThis.window = globalThis;
+}
+
 import "./lib/error-capture";
 
 import { consumeLastCapturedError } from "./lib/error-capture";

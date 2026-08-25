@@ -14,10 +14,8 @@ import {
   MapPin,
   Compass,
 } from "lucide-react";
-import { ThermalLegend } from "@/components/heatroute/ThermalMap";
-const ThermalMap = lazy(() =>
-  import("@/components/heatroute/ThermalMap").then((m) => ({ default: m.ThermalMap })),
-);
+import { ThermalLegend } from "@/components/heatroute/ThermalLegend";
+const ThermalMap = lazy(() => import("@/components/heatroute/ThermalMap"));
 import {
   highHeatThresholdC,
   type RouteOption,

@@ -1,15 +1,14 @@
-import { i as __toESM } from "../_runtime.mjs";
+import { r as __toESM } from "../_runtime.mjs";
+import { n as require_jsx_runtime, r as require_react } from "../_libs/react+tanstack__react-query.mjs";
 import { h as Link } from "../_libs/@tanstack/react-router+[...].mjs";
 import { c as createServerFn } from "./createServerFn-CIHAFgYl.mjs";
-import { S as require_react } from "../_libs/@react-leaflet/core+[...].mjs";
-import { n as require_jsx_runtime } from "../_libs/react+tanstack__react-query.mjs";
-import { a as stringType, i as objectType, o as tupleType, r as numberType } from "../_libs/zod.mjs";
-import { a as getRouteForecast, i as getCoolerRerouteData, n as createSsrRpc, o as getTemperatureHeatmap, t as ThermalLegend } from "./fortyguard-CwlHdn3s.mjs";
 import { t as calculateRouteThermalMetrics } from "./fortyguard-types-CAWfqUS8.mjs";
-import { t as Route } from "./app-dTxmJUOj.mjs";
+import { t as Route } from "./app-C5-bCHm8.mjs";
 import { a as routeAnalysis, i as routeAccent, n as fastestGeometryCoords, r as navSteps, t as analysisStages } from "./heatroute-data-ClpyG0yJ.mjs";
+import { a as stringType, i as objectType, o as tupleType, r as numberType } from "../_libs/zod.mjs";
+import { a as getTemperatureHeatmap, i as getRouteForecast, n as createSsrRpc, r as getCoolerRerouteData, t as ThermalLegend } from "./fortyguard-CWdJIj0v.mjs";
 import { C as Check, S as ChevronRight, T as ArrowLeft, _ as Footprints, a as Thermometer, b as Clock, d as Navigation, g as Layers, h as LoaderCircle, l as Search, m as LocateFixed, p as MapPin, r as TriangleAlert, s as Sparkles, t as X, v as Flame, w as ArrowRight } from "../_libs/lucide-react.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/app-DhVQgQXC.js
+//#region node_modules/.nitro/vite/services/ssr/assets/app-EATaTJDu.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 function RouteCard({ route, selected, onSelect, isNearTie = false }) {
@@ -197,7 +196,7 @@ function applyRecommendation(routes) {
 		recommended: r.id === result.recommendedId
 	}));
 }
-var ThermalMap = (0, import_react.lazy)(() => import("./fortyguard-CwlHdn3s.mjs").then((n) => n.r).then((n) => n.o).then((m) => ({ default: m.ThermalMap })));
+var ThermalMap = (0, import_react.lazy)(() => import("./ThermalMap-CLxbiU-m.mjs"));
 function HeatRouteApp() {
 	const loaderData = Route.useLoaderData();
 	const [phase, setPhase] = (0, import_react.useState)("search");

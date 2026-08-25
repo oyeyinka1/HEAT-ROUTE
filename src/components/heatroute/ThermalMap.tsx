@@ -1,4 +1,4 @@
-import { InteractiveMap } from "./InteractiveMap";
+import { useEffect, useState } from "react";
 import { type RouteOption } from "@/lib/heatroute-data";
 import { type TemperatureTile } from "@/lib/fortyguard-types";
 
@@ -17,15 +17,27 @@ export interface ThermalMapProps {
 }
 
 export function ThermalMap(props: ThermalMapProps) {
-  return <InteractiveMap {...props} />;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [MapComp, setMapComp] = useState<any>(null);
+
+  useEffect(() => {
+    // Only load the Leaflet interactive map on the client after browser mount
+    if (typeof window !== "undefined") {
+      import("./InteractiveMap").then((m) => {
+        setMapComp(() => m.InteractiveMap);
+      });
+    }
+  }, []);
+
+  if (!MapComp) {
+    return (
+      <div className={props.className || "absolute inset-0 overflow-hidden bg-background/50 flex items-center justify-center"}>
+        <span className="label-xs text-muted-foreground animate-pulse">Loading map...</span>
+      </div>
+    );
+  }
+
+  return <MapComp {...props} />;
 }
 
-export function ThermalLegend({ className = "" }: { className?: string }) {
-  return (
-    <div className={`glass-panel flex items-center gap-3 rounded-full px-4 py-2 ${className}`}>
-      <span className="label-xs">Cooler</span>
-      <span className="thermal-bar h-1.5 w-24 rounded-full sm:w-36" />
-      <span className="label-xs">Hotter</span>
-    </div>
-  );
-}
+export default ThermalMap;

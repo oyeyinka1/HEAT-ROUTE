@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState, useMemo, useEffect, lazy, Suspense } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -15,7 +15,7 @@ import {
   Compass,
 } from "lucide-react";
 import { ThermalLegend } from "@/components/heatroute/ThermalLegend";
-const ThermalMap = lazy(() => import("@/components/heatroute/ThermalMap"));
+import { ThermalMap } from "@/components/heatroute/ThermalMap";
 import {
   highHeatThresholdC,
   type RouteOption,
@@ -280,15 +280,13 @@ function HeatIntelligence() {
             <section className="glass-panel overflow-hidden rounded-3xl">
               <div className="relative h-64 sm:h-80 w-full">
                 {previewRoute.length > 0 ? (
-                  <Suspense fallback={<div className="h-full w-full bg-secondary/30" />}>
-                    <ThermalMap
-                      routes={previewRoute}
-                      activeRouteId="preview-route"
-                      tiles={tiles}
-                      className="absolute inset-0 h-full w-full"
-                      fitBoundsPaddingRight={60}
-                    />
-                  </Suspense>
+                  <ThermalMap
+                    routes={previewRoute}
+                    activeRouteId="preview-route"
+                    tiles={tiles}
+                    className="absolute inset-0 h-full w-full"
+                    fitBoundsPaddingRight={60}
+                  />
                 ) : (
                   <div className="grid h-full w-full place-items-center bg-secondary/30 text-sm text-muted-foreground">
                     Map preview unavailable

@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState, useRef, lazy, Suspense } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { RouteCard } from "@/components/heatroute/RouteCard";
 import { ThermalLegend } from "@/components/heatroute/ThermalLegend";
-const ThermalMap = lazy(() => import("@/components/heatroute/ThermalMap"));
+import { ThermalMap } from "@/components/heatroute/ThermalMap";
 import {
   analysisStages,
   navSteps,
@@ -533,8 +533,7 @@ function HeatRouteApp() {
 
   return (
     <main className="relative h-[100dvh] w-full overflow-hidden bg-background">
-      <Suspense fallback={<div className="absolute inset-0 bg-background" />}>
-        <ThermalMap
+      <ThermalMap
           routes={mapRoutes}
           activeRouteId={selected?.id}
           onSelectRoute={phase === "routes" ? setSelectedId : undefined}
@@ -542,7 +541,6 @@ function HeatRouteApp() {
           {...(progress !== undefined ? { progress } : {})}
           dim={phase === "analyzing"}
         />
-      </Suspense>
 
       <TopBar
         temp={selected?.metrics?.peakTempC ?? null}

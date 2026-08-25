@@ -1,4 +1,4 @@
-//#region node_modules/.nitro/vite/services/ssr/assets/_tanstack-start-manifest_v-B-6ZQ_no.js
+//#region node_modules/.nitro/vite/services/ssr/assets/_tanstack-start-manifest_v-pVpuNtb6.js
 var tsrStartManifest = () => ({ routes: {
 	__root__: {
 		filePath: "C:/Users/MICHAEL/Desktop/HEAT-ROUTE/heatroute-navigator-main/src/routes/__root.tsx",
@@ -8,43 +8,42 @@ var tsrStartManifest = () => ({ routes: {
 			"/heat-intelligence"
 		],
 		preloads: [
-			"/assets/index-BB_Tf5NQ.js",
-			"/assets/jsx-runtime-Cltr0gcK.js",
-			"/assets/link-Ddfgt-ke.js",
-			"/assets/createClientRpc-JyrInjzD.js"
+			"/assets/index-BpIU1UNx.js",
+			"/assets/link-Qe1PiQbD.js",
+			"/assets/preload-helper-eZgJcxZW.js"
 		],
 		scripts: [{ attrs: {
 			type: "module",
 			async: !0,
-			src: "/assets/index-BB_Tf5NQ.js"
+			src: "/assets/index-BpIU1UNx.js"
 		} }]
 	},
 	"/": {
 		filePath: "C:/Users/MICHAEL/Desktop/HEAT-ROUTE/heatroute-navigator-main/src/routes/index.tsx",
 		children: void 0,
 		preloads: [
-			"/assets/routes-CtoC7NRX.js",
-			"/assets/heatroute-data-Bz9kZbpZ.js",
-			"/assets/footprints-Dn2wW1Kh.js"
+			"/assets/routes-DxcKs1Ct.js",
+			"/assets/heatroute-data-DsTrPOo0.js",
+			"/assets/footprints-D4V1Ewqt.js"
 		]
 	},
 	"/app": {
 		filePath: "C:/Users/MICHAEL/Desktop/HEAT-ROUTE/heatroute-navigator-main/src/routes/app.tsx",
 		children: void 0,
 		preloads: [
-			"/assets/app-BfY_MuAe.js",
-			"/assets/fortyguard-Kx7BmrWb.js",
-			"/assets/heatroute-data-Bz9kZbpZ.js",
-			"/assets/footprints-Dn2wW1Kh.js"
+			"/assets/app-DwqjU9ZE.js",
+			"/assets/fortyguard-Bxnpk3jB.js",
+			"/assets/heatroute-data-DsTrPOo0.js",
+			"/assets/footprints-D4V1Ewqt.js"
 		]
 	},
 	"/heat-intelligence": {
 		filePath: "C:/Users/MICHAEL/Desktop/HEAT-ROUTE/heatroute-navigator-main/src/routes/heat-intelligence.tsx",
 		children: void 0,
 		preloads: [
-			"/assets/heat-intelligence-DMmH_5Nk.js",
-			"/assets/fortyguard-Kx7BmrWb.js",
-			"/assets/heatroute-data-Bz9kZbpZ.js"
+			"/assets/heat-intelligence-_UsguUQ6.js",
+			"/assets/fortyguard-Bxnpk3jB.js",
+			"/assets/heatroute-data-DsTrPOo0.js"
 		]
 	}
 } });

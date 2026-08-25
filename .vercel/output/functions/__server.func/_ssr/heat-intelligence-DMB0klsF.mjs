@@ -1,12 +1,11 @@
 import { r as __toESM } from "../_runtime.mjs";
-import { n as require_jsx_runtime, r as require_react } from "../_libs/react+tanstack__react-query.mjs";
 import { h as Link } from "../_libs/@tanstack/react-router+[...].mjs";
-import { i as getRouteForecast, t as ThermalLegend } from "./fortyguard-CWdJIj0v.mjs";
+import { n as require_jsx_runtime, r as require_react } from "../_libs/react+tanstack__react-query.mjs";
+import { a as getRouteForecast, n as ThermalMap, t as ThermalLegend } from "./fortyguard-CV79_jNr.mjs";
 import { T as ArrowLeft, a as Thermometer, b as Clock, h as LoaderCircle, n as Wind, o as Sun, v as Flame, w as ArrowRight, x as CircleAlert, y as Compass } from "../_libs/lucide-react.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/heat-intelligence-Qr7pMya1.js
+//#region node_modules/.nitro/vite/services/ssr/assets/heat-intelligence-DMB0klsF.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
-var ThermalMap = (0, import_react.lazy)(() => import("./ThermalMap-CLxbiU-m.mjs"));
 function HeatIntelligence() {
 	const [routeContext, setRouteContext] = (0, import_react.useState)(null);
 	const [forecastResult, setForecastResult] = (0, import_react.useState)(null);
@@ -199,15 +198,12 @@ function HeatIntelligence() {
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 						className: "relative h-64 sm:h-80 w-full",
 						children: [
-							previewRoute.length > 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(import_react.Suspense, {
-								fallback: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "h-full w-full bg-secondary/30" }),
-								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ThermalMap, {
-									routes: previewRoute,
-									activeRouteId: "preview-route",
-									tiles,
-									className: "absolute inset-0 h-full w-full",
-									fitBoundsPaddingRight: 60
-								})
+							previewRoute.length > 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ThermalMap, {
+								routes: previewRoute,
+								activeRouteId: "preview-route",
+								tiles,
+								className: "absolute inset-0 h-full w-full",
+								fitBoundsPaddingRight: 60
 							}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 								className: "grid h-full w-full place-items-center bg-secondary/30 text-sm text-muted-foreground",
 								children: "Map preview unavailable"

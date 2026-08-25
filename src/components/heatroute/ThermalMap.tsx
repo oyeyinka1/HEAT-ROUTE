@@ -1,4 +1,7 @@
-import { useEffect, useState } from "react";
+// ThermalMap is a thin re-export of InteractiveMap.
+// InteractiveMap has zero top-level Leaflet imports — it loads leaflet lazily
+// inside useEffect (client-only). This static import is SSR-safe.
+import { InteractiveMap } from "./InteractiveMap";
 import { type RouteOption } from "@/lib/heatroute-data";
 import { type TemperatureTile } from "@/lib/fortyguard-types";
 
@@ -17,27 +20,7 @@ export interface ThermalMapProps {
 }
 
 export function ThermalMap(props: ThermalMapProps) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [MapComp, setMapComp] = useState<any>(null);
-
-  useEffect(() => {
-    // Only load the Leaflet interactive map on the client after browser mount
-    if (typeof window !== "undefined") {
-      import("./InteractiveMap").then((m) => {
-        setMapComp(() => m.InteractiveMap);
-      });
-    }
-  }, []);
-
-  if (!MapComp) {
-    return (
-      <div className={props.className || "absolute inset-0 overflow-hidden bg-background/50 flex items-center justify-center"}>
-        <span className="label-xs text-muted-foreground animate-pulse">Loading map...</span>
-      </div>
-    );
-  }
-
-  return <MapComp {...props} />;
+  return <InteractiveMap {...props} />;
 }
 
 export default ThermalMap;

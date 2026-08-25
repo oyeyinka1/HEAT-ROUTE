@@ -1,6 +1,6 @@
 import { InteractiveMap } from "./InteractiveMap";
 import { type RouteOption } from "@/lib/heatroute-data";
-import { type TemperatureTile } from "@/lib/fortyguard";
+import { type TemperatureTile } from "@/lib/fortyguard-types";
 
 export interface ThermalMapProps {
   routes?: RouteOption[];

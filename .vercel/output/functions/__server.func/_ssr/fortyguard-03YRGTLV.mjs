@@ -1,15 +1,30 @@
-import { r as __toESM } from "../_runtime.mjs";
+import { i as __toESM, n as __exportAll$1 } from "../_runtime.mjs";
+import { t as getServerFnById } from "../__23tanstack-start-server-fn-resolver-DG6ZwK-c.mjs";
 import { c as createServerFn, i as TSS_SERVER_FUNCTION } from "./createServerFn-CIHAFgYl.mjs";
-import { f as require_react } from "../_libs/@react-leaflet/core+[...].mjs";
+import { S as require_react } from "../_libs/@react-leaflet/core+[...].mjs";
 import { n as require_jsx_runtime } from "../_libs/react+tanstack__react-query.mjs";
-import { t as getServerFnById } from "../__23tanstack-start-server-fn-resolver-CfvS3L3h.mjs";
 import { i as objectType, n as arrayType, o as tupleType, r as numberType, t as anyType } from "../_libs/zod.mjs";
-import { t as require_leaflet_src } from "../_libs/leaflet.mjs";
-import { a as CircleMarker, i as MapContainer, n as Polyline, o as useMap, r as Polygon, t as TileLayer } from "../_libs/react-leaflet.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/fortyguard-B6mzZsho.js
+//#region node_modules/.nitro/vite/services/ssr/assets/fortyguard-03YRGTLV.js
+var fortyguard_03YRGTLV_exports = /* @__PURE__ */ __exportAll$1({
+	a: () => ThermalLegend,
+	i: () => createSsrRpc,
+	n: () => getRouteForecast,
+	o: () => ThermalMap_exports,
+	r: () => getTemperatureHeatmap,
+	t: () => getCoolerRerouteData
+});
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
-var import_leaflet_src = /* @__PURE__ */ __toESM(require_leaflet_src());
+var __defProp = Object.defineProperty;
+var __exportAll = (all, no_symbols) => {
+	let target = {};
+	for (var name in all) __defProp(target, name, {
+		get: all[name],
+		enumerable: true
+	});
+	if (!no_symbols) __defProp(target, Symbol.toStringTag, { value: "Module" });
+	return target;
+};
 var DEFAULT_MAP_CENTER = [39.8283, -98.5795];
 var DEFAULT_ZOOM = 4;
 function getTileColor(tempC) {
@@ -33,42 +48,9 @@ var ROUTE_COLORS = {
 		glow: "rgba(96, 165, 250, 0.35)"
 	}
 };
-/** Helper to fit map bounds to visible routes or tiles */
-function MapBoundsController({ routes, tiles, paddingRight = 420 }) {
-	const map = useMap();
-	(0, import_react.useEffect)(() => {
-		const latLngs = [];
-		if (routes && routes.length > 0) routes.forEach((r) => {
-			r.geometry.forEach(([lon, lat]) => {
-				latLngs.push([lat, lon]);
-			});
-		});
-		else if (tiles && tiles.length > 0) tiles.forEach((t) => {
-			t.polygon.forEach(([lon, lat]) => {
-				latLngs.push([lat, lon]);
-			});
-		});
-		if (latLngs.length > 0) {
-			const bounds = import_leaflet_src.default.latLngBounds(latLngs);
-			map.fitBounds(bounds, {
-				paddingTopLeft: [40, 40],
-				paddingBottomRight: [paddingRight, 40],
-				maxZoom: 16
-			});
-		}
-	}, [
-		routes,
-		tiles,
-		paddingRight,
-		map
-	]);
-	return null;
-}
-function InteractiveMap({ routes, activeRouteId, onSelectRoute, drawKey: _drawKey, progress, dim = false, tiles, className, fitBoundsPaddingRight = 420 }) {
-	const [isMounted, setIsMounted] = (0, import_react.useState)(false);
-	(0, import_react.useEffect)(() => {
-		setIsMounted(true);
-	}, []);
+/** Inner map component — only rendered after leaflet is loaded on the client */
+function ClientMap({ routes, activeRouteId, onSelectRoute, progress, dim = false, tiles, className, fitBoundsPaddingRight = 420, L, RL }) {
+	const { MapContainer, TileLayer, Polyline, CircleMarker, Polygon, useMap } = RL;
 	const active = (0, import_react.useMemo)(() => routes?.find((r) => r.id === activeRouteId) ?? routes?.[0], [routes, activeRouteId]);
 	const progressCoord = (0, import_react.useMemo)(() => {
 		if (typeof progress !== "number" || !active || !active.geometry.length) return null;
@@ -86,13 +68,32 @@ function InteractiveMap({ routes, activeRouteId, onSelectRoute, drawKey: _drawKe
 		const [lon, lat] = routes[0].geometry[routes[0].geometry.length - 1];
 		return [lat, lon];
 	}, [routes]);
-	if (!isMounted) return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-		className: "absolute inset-0 bg-background/50 flex items-center justify-center",
-		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-			className: "label-xs text-muted-foreground animate-pulse",
-			children: "Loading map..."
-		})
-	});
+	/** Inner bounds controller — uses useMap hook, must be inside MapContainer */
+	function MapBoundsController() {
+		const map = useMap();
+		(0, import_react.useEffect)(() => {
+			const latLngs = [];
+			if (routes && routes.length > 0) routes.forEach((r) => {
+				r.geometry.forEach(([lon, lat]) => {
+					latLngs.push([lat, lon]);
+				});
+			});
+			else if (tiles && tiles.length > 0) tiles.forEach((t) => {
+				t.polygon.forEach(([lon, lat]) => {
+					latLngs.push([lat, lon]);
+				});
+			});
+			if (latLngs.length > 0) {
+				const bounds = L.latLngBounds(latLngs);
+				map.fitBounds(bounds, {
+					paddingTopLeft: [40, 40],
+					paddingBottomRight: [fitBoundsPaddingRight, 40],
+					maxZoom: 16
+				});
+			}
+		}, [map]);
+		return null;
+	}
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 		className: className || "absolute inset-0 overflow-hidden transition-opacity duration-500",
 		style: { opacity: dim ? .42 : 1 },
@@ -107,11 +108,7 @@ function InteractiveMap({ routes, activeRouteId, onSelectRoute, drawKey: _drawKe
 					attribution: "© <a href=\"https://www.openstreetmap.org/copyright\" target=\"_blank\" rel=\"noopener noreferrer\">OpenStreetMap</a> contributors",
 					url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(MapBoundsController, {
-					routes,
-					tiles,
-					paddingRight: fitBoundsPaddingRight
-				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(MapBoundsController, {}),
 				tiles?.map((tile) => {
 					const positions = tile.polygon.map(([lon, lat]) => [lat, lon]);
 					const fillColor = getTileColor(tile.averageTempC);
@@ -213,6 +210,33 @@ function InteractiveMap({ routes, activeRouteId, onSelectRoute, drawKey: _drawKe
 		})
 	});
 }
+function InteractiveMap(props) {
+	const [libs, setLibs] = (0, import_react.useState)(null);
+	(0, import_react.useEffect)(() => {
+		Promise.all([import("../_libs/@react-leaflet/core+[...].mjs").then((n) => /* @__PURE__ */ __toESM(n.b())), import("../_libs/react-leaflet.mjs").then((n) => n.t)]).then(([L, RL]) => {
+			setLibs({
+				L,
+				RL
+			});
+		});
+	}, []);
+	if (!libs) return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+		className: "absolute inset-0 bg-background/50 flex items-center justify-center",
+		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+			className: "label-xs text-muted-foreground animate-pulse",
+			children: "Loading map..."
+		})
+	});
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ClientMap, {
+		...props,
+		L: libs.L,
+		RL: libs.RL
+	});
+}
+var ThermalMap_exports = /* @__PURE__ */ __exportAll({
+	ThermalLegend: () => ThermalLegend,
+	ThermalMap: () => ThermalMap
+});
 function ThermalMap(props) {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(InteractiveMap, { ...props });
 }
@@ -245,84 +269,12 @@ var createSsrRpc = (functionId) => {
 	});
 };
 /**
-* Ray-casting algorithm for Point in Polygon check
-* pt: [lon, lat], polygon: [[lon, lat], ...]
-*/
-function isPointInPolygon(pt, polygon) {
-	const [x, y] = pt;
-	let inside = false;
-	for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-		const [xi, yi] = polygon[i];
-		const [xj, yj] = polygon[j];
-		if (yi > y !== yj > y && x < (xj - xi) * (y - yi) / (yj - yi) + xi) inside = !inside;
-	}
-	return inside;
-}
-/**
-* Helper to compute stats from tiles array if not provided by API
-*/
-/**
 * Server function to fetch and cache FortyGuard temperature tiles for a set of routes
 */
 var getTemperatureHeatmap = createServerFn({ method: "POST" }).validator(objectType({ routesCoordinates: arrayType(arrayType(tupleType([numberType(), numberType()]))) })).handler(createSsrRpc("18953c3e96f1fbcf3e2ef03dd924a79576ec1301eb37c15083e132c1cdc5565e"));
 /**
-* Samples ~20 points along a route geometry, locates intersecting FortyGuard tiles,
-* and calculates peakTempC, avgTempC, and highHeatMinutes.
-*/
-function calculateRouteThermalMetrics(routeCoordinates, durationMin, tiles, defaultBaselineTempC = 38.2, samplePointsCount = 20, thresholdC = 38) {
-	if (!routeCoordinates || routeCoordinates.length === 0) return {
-		peakTempC: defaultBaselineTempC,
-		avgTempC: defaultBaselineTempC,
-		highHeatMinutes: 0,
-		sampledPointsCount: 0
-	};
-	const sampledPoints = [];
-	const totalCoords = routeCoordinates.length;
-	if (totalCoords <= samplePointsCount) sampledPoints.push(...routeCoordinates);
-	else for (let i = 0; i < samplePointsCount; i++) {
-		const idx = Math.min(Math.floor(i / (samplePointsCount - 1) * (totalCoords - 1)), totalCoords - 1);
-		sampledPoints.push(routeCoordinates[idx]);
-	}
-	const sampledTemps = [];
-	sampledPoints.forEach((pt) => {
-		let matchedTile;
-		for (const tile of tiles) {
-			const [minX, minY, maxX, maxY] = tile.bbox;
-			if (pt[0] >= minX && pt[0] <= maxX && pt[1] >= minY && pt[1] <= maxY) {
-				if (isPointInPolygon(pt, tile.polygon)) {
-					matchedTile = tile;
-					break;
-				}
-			}
-		}
-		if (matchedTile) sampledTemps.push(matchedTile.averageTempC);
-		else if (tiles.length > 0) {
-			let closestTile = tiles[0];
-			let minDist = Infinity;
-			for (const t of tiles) {
-				const d = Math.hypot(pt[0] - t.polygon[0][0], pt[1] - t.polygon[0][1]);
-				if (d < minDist) {
-					minDist = d;
-					closestTile = t;
-				}
-			}
-			sampledTemps.push(closestTile.averageTempC);
-		} else sampledTemps.push(defaultBaselineTempC);
-	});
-	const peakTempC = Number(Math.max(...sampledTemps).toFixed(1));
-	const avgTempC = Number((sampledTemps.reduce((acc, v) => acc + v, 0) / sampledTemps.length).toFixed(1));
-	const highHeatPoints = sampledTemps.filter((t) => t >= thresholdC).length;
-	return {
-		peakTempC,
-		avgTempC,
-		highHeatMinutes: Math.round(highHeatPoints / sampledTemps.length * durationMin),
-		sampledPointsCount: sampledTemps.length
-	};
-}
-/**
 * Server function to fetch real FortyGuard 12-hour forecast at 5 time offsets:
 * Now (+0h), +3h, +6h, +9h, +12h.
-* Returns real peak/avg temperatures per slot or marks slot as unavailable if failed.
 */
 var getRouteForecast = createServerFn({ method: "POST" }).validator(objectType({
 	routeCoordinates: arrayType(tupleType([numberType(), numberType()])),
@@ -331,11 +283,13 @@ var getRouteForecast = createServerFn({ method: "POST" }).validator(objectType({
 })).handler(createSsrRpc("a6f30602e4362437b274a3a6b2c7fe6920610c50e043e40cc2c8b1c3f9b6eac6"));
 /**
 * Server function to fetch real cooler route thermal metrics and tiles
-* (using the pre-fetched +6h / +9h evening forecast data) for the simulated condition change.
+* (using the real forecast data for the active route's actual coordinates) for the simulated condition change.
 */
 var getCoolerRerouteData = createServerFn({ method: "POST" }).validator(objectType({
 	routeCoordinates: arrayType(tupleType([numberType(), numberType()])),
-	durationMin: numberType().default(21)
+	durationMin: numberType().default(21),
+	currentPeakTempC: numberType().optional(),
+	currentHighHeatMinutes: numberType().optional()
 })).handler(createSsrRpc("7773f1b38864253439cd185d954a1108c5027a663acc3c7021b9711e8aafa1ed"));
 //#endregion
-export { getCoolerRerouteData as a, createSsrRpc as i, ThermalMap as n, getRouteForecast as o, calculateRouteThermalMetrics as r, getTemperatureHeatmap as s, ThermalLegend as t };
+export { getRouteForecast as a, getCoolerRerouteData as i, createSsrRpc as n, getTemperatureHeatmap as o, fortyguard_03YRGTLV_exports as r, ThermalLegend as t };

@@ -1,8 +1,12 @@
 import { useEffect, useState, useMemo } from "react";
-import { MapContainer, TileLayer, Polyline, CircleMarker, Polygon, useMap } from "react-leaflet";
-import L from "leaflet";
 import type { RouteOption } from "@/lib/heatroute-data";
-import type { TemperatureTile } from "@/lib/fortyguard";
+import type { TemperatureTile } from "@/lib/fortyguard-types";
+
+// Dynamically imported types (only used client-side after mount)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type LeafletLib = any;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type ReactLeafletLib = any;
 
 export interface InteractiveMapProps {
   routes?: RouteOption[];
@@ -32,83 +36,44 @@ function getTileColor(tempC: number): string {
 // Colors matching the design tokens
 const ROUTE_COLORS: Record<string, { main: string; glow: string }> = {
   "heat-safe": {
-    main: "rgb(68, 209, 137)", // oklch safe green
+    main: "rgb(68, 209, 137)",
     glow: "rgba(68, 209, 137, 0.4)",
   },
   fastest: {
-    main: "rgb(240, 240, 245)", // oklch fastest white/light
+    main: "rgb(240, 240, 245)",
     glow: "rgba(240, 240, 245, 0.3)",
   },
   balanced: {
-    main: "rgb(96, 165, 250)", // oklch balanced blue
+    main: "rgb(96, 165, 250)",
     glow: "rgba(96, 165, 250, 0.35)",
   },
 };
 
-/** Helper to fit map bounds to visible routes or tiles */
-function MapBoundsController({
-  routes,
-  tiles,
-  paddingRight = 420,
-}: {
-  routes?: RouteOption[] | undefined;
-  tiles?: TemperatureTile[] | undefined;
-  paddingRight?: number | undefined;
-}) {
-  const map = useMap();
-
-  useEffect(() => {
-    const latLngs: [number, number][] = [];
-    if (routes && routes.length > 0) {
-      routes.forEach((r) => {
-        r.geometry.forEach(([lon, lat]) => {
-          latLngs.push([lat, lon]);
-        });
-      });
-    } else if (tiles && tiles.length > 0) {
-      tiles.forEach((t) => {
-        t.polygon.forEach(([lon, lat]) => {
-          latLngs.push([lat, lon]);
-        });
-      });
-    }
-
-    if (latLngs.length > 0) {
-      const bounds = L.latLngBounds(latLngs);
-      map.fitBounds(bounds, {
-        paddingTopLeft: [40, 40],
-        paddingBottomRight: [paddingRight, 40],
-        maxZoom: 16,
-      });
-    }
-  }, [routes, tiles, paddingRight, map]);
-
-  return null;
+interface ClientMapProps extends InteractiveMapProps {
+  L: LeafletLib;
+  RL: ReactLeafletLib;
 }
 
-export function InteractiveMap({
+/** Inner map component — only rendered after leaflet is loaded on the client */
+function ClientMap({
   routes,
   activeRouteId,
   onSelectRoute,
-  drawKey: _drawKey,
   progress,
   dim = false,
   tiles,
   className,
   fitBoundsPaddingRight = 420,
-}: InteractiveMapProps) {
-  const [isMounted, setIsMounted] = useState(false);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
+  L,
+  RL,
+}: ClientMapProps) {
+  const { MapContainer, TileLayer, Polyline, CircleMarker, Polygon, useMap } = RL;
 
   const active = useMemo(
     () => routes?.find((r) => r.id === activeRouteId) ?? routes?.[0],
     [routes, activeRouteId],
   );
 
-  // Compute progress coordinate on active route if navigating
   const progressCoord = useMemo<[number, number] | null>(() => {
     if (typeof progress !== "number" || !active || !active.geometry.length) return null;
     const index = Math.min(
@@ -131,12 +96,34 @@ export function InteractiveMap({
     return [lat, lon];
   }, [routes]);
 
-  if (!isMounted) {
-    return (
-      <div className="absolute inset-0 bg-background/50 flex items-center justify-center">
-        <span className="label-xs text-muted-foreground animate-pulse">Loading map...</span>
-      </div>
-    );
+  /** Inner bounds controller — uses useMap hook, must be inside MapContainer */
+  function MapBoundsController() {
+    const map = useMap();
+    useEffect(() => {
+      const latLngs: [number, number][] = [];
+      if (routes && routes.length > 0) {
+        routes.forEach((r) => {
+          r.geometry.forEach(([lon, lat]) => {
+            latLngs.push([lat, lon]);
+          });
+        });
+      } else if (tiles && tiles.length > 0) {
+        tiles.forEach((t) => {
+          t.polygon.forEach(([lon, lat]) => {
+            latLngs.push([lat, lon]);
+          });
+        });
+      }
+      if (latLngs.length > 0) {
+        const bounds = L.latLngBounds(latLngs);
+        map.fitBounds(bounds, {
+          paddingTopLeft: [40, 40],
+          paddingBottomRight: [fitBoundsPaddingRight, 40],
+          maxZoom: 16,
+        });
+      }
+    }, [map]);
+    return null;
   }
 
   return (
@@ -156,7 +143,7 @@ export function InteractiveMap({
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
-        <MapBoundsController routes={routes} tiles={tiles} paddingRight={fitBoundsPaddingRight} />
+        <MapBoundsController />
 
         {/* FortyGuard Heatmap Tiles */}
         {tiles?.map((tile) => {
@@ -181,9 +168,7 @@ export function InteractiveMap({
         {routes?.map((route) => {
           const isActive = route.id === active?.id;
           const colors = ROUTE_COLORS[route.kind] ?? ROUTE_COLORS["heat-safe"]!;
-          // Leaflet expects [latitude, longitude]
           const positions = route.geometry.map(([lon, lat]) => [lat, lon] as [number, number]);
-
           return (
             <span key={route.id}>
               {/* Outer glow line */}
@@ -196,9 +181,7 @@ export function InteractiveMap({
                   lineCap: "round",
                   lineJoin: "round",
                 }}
-                eventHandlers={{
-                  click: () => onSelectRoute?.(route.id),
-                }}
+                eventHandlers={{ click: () => onSelectRoute?.(route.id) }}
               />
               {/* Core inner polyline */}
               <Polyline
@@ -210,9 +193,7 @@ export function InteractiveMap({
                   lineCap: "round",
                   lineJoin: "round",
                 }}
-                eventHandlers={{
-                  click: () => onSelectRoute?.(route.id),
-                }}
+                eventHandlers={{ click: () => onSelectRoute?.(route.id) }}
               />
             </span>
           );
@@ -298,4 +279,25 @@ export function InteractiveMap({
       </MapContainer>
     </div>
   );
+}
+
+export function InteractiveMap(props: InteractiveMapProps) {
+  const [libs, setLibs] = useState<{ L: LeafletLib; RL: ReactLeafletLib } | null>(null);
+
+  useEffect(() => {
+    // Only import leaflet on the client — never during SSR
+    Promise.all([import("leaflet"), import("react-leaflet")]).then(([L, RL]) => {
+      setLibs({ L, RL });
+    });
+  }, []);
+
+  if (!libs) {
+    return (
+      <div className="absolute inset-0 bg-background/50 flex items-center justify-center">
+        <span className="label-xs text-muted-foreground animate-pulse">Loading map...</span>
+      </div>
+    );
+  }
+
+  return <ClientMap {...props} L={libs.L} RL={libs.RL} />;
 }

@@ -1,14 +1,15 @@
-import { r as __toESM } from "../_runtime.mjs";
+import { i as __toESM } from "../_runtime.mjs";
 import { h as Link } from "../_libs/@tanstack/react-router+[...].mjs";
 import { c as createServerFn } from "./createServerFn-CIHAFgYl.mjs";
-import { f as require_react } from "../_libs/@react-leaflet/core+[...].mjs";
+import { S as require_react } from "../_libs/@react-leaflet/core+[...].mjs";
 import { n as require_jsx_runtime } from "../_libs/react+tanstack__react-query.mjs";
-import { t as Route } from "./app-B72BJIU4.mjs";
-import { a as routeAnalysis, i as routeAccent, n as fastestGeometryCoords, r as navSteps, t as analysisStages } from "./heatroute-data-ClpyG0yJ.mjs";
 import { a as stringType, i as objectType, o as tupleType, r as numberType } from "../_libs/zod.mjs";
-import { a as getCoolerRerouteData, i as createSsrRpc, n as ThermalMap, o as getRouteForecast, r as calculateRouteThermalMetrics, s as getTemperatureHeatmap, t as ThermalLegend } from "./fortyguard-B6mzZsho.mjs";
+import { a as getRouteForecast, i as getCoolerRerouteData, n as createSsrRpc, o as getTemperatureHeatmap, t as ThermalLegend } from "./fortyguard-03YRGTLV.mjs";
+import { t as calculateRouteThermalMetrics } from "./fortyguard-types-CAWfqUS8.mjs";
+import { t as Route } from "./app-CYyIEtWn.mjs";
+import { a as routeAnalysis, i as routeAccent, n as fastestGeometryCoords, r as navSteps, t as analysisStages } from "./heatroute-data-ClpyG0yJ.mjs";
 import { C as Check, S as ChevronRight, T as ArrowLeft, _ as Footprints, a as Thermometer, b as Clock, d as Navigation, g as Layers, h as LoaderCircle, l as Search, m as LocateFixed, p as MapPin, r as TriangleAlert, s as Sparkles, t as X, v as Flame, w as ArrowRight } from "../_libs/lucide-react.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/app-B_BtzJIa.js
+//#region node_modules/.nitro/vite/services/ssr/assets/app-BbDb6nwk.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 function RouteCard({ route, selected, onSelect, isNearTie = false }) {
@@ -196,6 +197,7 @@ function applyRecommendation(routes) {
 		recommended: r.id === result.recommendedId
 	}));
 }
+var ThermalMap = (0, import_react.lazy)(() => import("./fortyguard-03YRGTLV.mjs").then((n) => n.r).then((n) => n.o).then((m) => ({ default: m.ThermalMap })));
 function HeatRouteApp() {
 	const loaderData = Route.useLoaderData();
 	const [phase, setPhase] = (0, import_react.useState)("search");
@@ -342,9 +344,9 @@ function HeatRouteApp() {
 						const distanceKm = fetched.distanceMeters ? Number((fetched.distanceMeters / 1e3).toFixed(1)) : 1.5;
 						const thermal = calculateRouteThermalMetrics(fetched.coordinates, durationMin, currentTiles);
 						return {
-							id: isAlt ? "r-direct" : "r-heat-safe",
-							kind: isAlt ? "direct" : "heat-safe",
-							label: isAlt ? "Direct Route" : "Heat-Safe",
+							id: isAlt ? "r-fastest" : "r-heat-safe",
+							kind: isAlt ? "fastest" : "heat-safe",
+							label: isAlt ? "Fastest Route" : "Heat-Safe",
 							geometry: fetched.coordinates,
 							steps: fetched.steps ?? [],
 							recommended: !isAlt,
@@ -481,10 +483,16 @@ function HeatRouteApp() {
 			console.info("[Demo Reroute] BEFORE — Current route metrics:", `id=${activeRoute?.id},`, `peak=${activeRoute?.metrics.peakTempC?.toFixed(1)}°C,`, `avg=${activeRoute?.metrics.avgTempC?.toFixed(1)}°C,`, `highHeatMin=${activeRoute?.metrics.highHeatMinutes}min,`, `durationMin=${activeRoute?.metrics.durationMin}min`);
 			const rerouteData = await getCoolerRerouteData({ data: {
 				routeCoordinates: activeCoords,
-				durationMin: Math.max(15, (activeRoute?.metrics.durationMin ?? 20) + 1)
+				durationMin: Math.max(15, (activeRoute?.metrics.durationMin ?? 20) + 1),
+				currentPeakTempC: activeRoute?.metrics.peakTempC,
+				currentHighHeatMinutes: activeRoute?.metrics.highHeatMinutes
 			} });
 			if (!rerouteData.available || rerouteData.cacheSource === "unavailable") {
 				setRerouteNotice(rerouteData.statusNotice || "Condition simulation unavailable for this location right now");
+				return;
+			}
+			if (!rerouteData.hasCoolerOption) {
+				setRerouteNotice(rerouteData.message || "You're already on the best option, no cooler alternative found right now.");
 				return;
 			}
 			console.info("[Demo Reroute] AFTER — Cooler route metrics:", `slot=${rerouteData.slotKey} (${rerouteData.timeSlotLabel}),`, `source=${rerouteData.cacheSource},`, `tileCount=${rerouteData.tileCount},`, `peak=${rerouteData.route.metrics.peakTempC.toFixed(1)}°C,`, `avg=${rerouteData.route.metrics.avgTempC.toFixed(1)}°C,`, `highHeatMin=${rerouteData.route.metrics.highHeatMinutes}min,`, `durationMin=${rerouteData.route.metrics.durationMin}min`);
@@ -519,13 +527,16 @@ function HeatRouteApp() {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("main", {
 		className: "relative h-[100dvh] w-full overflow-hidden bg-background",
 		children: [
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(ThermalMap, {
-				routes: mapRoutes,
-				activeRouteId: selected?.id,
-				onSelectRoute: phase === "routes" ? setSelectedId : void 0,
-				drawKey: `${phase}-${routes.map((r) => r.id).join("-")}`,
-				...progress !== void 0 ? { progress } : {},
-				dim: phase === "analyzing"
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(import_react.Suspense, {
+				fallback: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "absolute inset-0 bg-background" }),
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ThermalMap, {
+					routes: mapRoutes,
+					activeRouteId: selected?.id,
+					onSelectRoute: phase === "routes" ? setSelectedId : void 0,
+					drawKey: `${phase}-${routes.map((r) => r.id).join("-")}`,
+					...progress !== void 0 ? { progress } : {},
+					dim: phase === "analyzing"
+				})
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TopBar, {
 				temp: selected?.metrics?.peakTempC ?? null,

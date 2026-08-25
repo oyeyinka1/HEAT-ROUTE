@@ -9,4 +9,9 @@ export default defineConfig({
   nitro: {
     preset: "vercel",
   },
+  ssr: {
+    // Leaflet and react-leaflet access `window` at import time and must never run in Node.js SSR.
+    // Mark them as external so the server bundle skips them entirely.
+    external: ["leaflet", "react-leaflet"],
+  },
 });

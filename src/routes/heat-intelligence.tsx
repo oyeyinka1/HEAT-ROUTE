@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, lazy, Suspense } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -14,12 +14,16 @@ import {
   MapPin,
   Compass,
 } from "lucide-react";
-import { ThermalMap, ThermalLegend } from "@/components/heatroute/ThermalMap";
+import { ThermalLegend } from "@/components/heatroute/ThermalMap";
+const ThermalMap = lazy(() =>
+  import("@/components/heatroute/ThermalMap").then((m) => ({ default: m.ThermalMap })),
+);
 import {
   highHeatThresholdC,
   type RouteOption,
 } from "@/lib/heatroute-data";
-import { getRouteForecast, type RouteForecastResult } from "@/lib/fortyguard";
+import { type RouteForecastResult } from "@/lib/fortyguard-types";
+import { getRouteForecast } from "@/lib/fortyguard";
 
 export const Route = createFileRoute("/heat-intelligence")({
   head: () => ({
@@ -278,13 +282,15 @@ function HeatIntelligence() {
             <section className="glass-panel overflow-hidden rounded-3xl">
               <div className="relative h-64 sm:h-80 w-full">
                 {previewRoute.length > 0 ? (
-                  <ThermalMap
-                    routes={previewRoute}
-                    activeRouteId="preview-route"
-                    tiles={tiles}
-                    className="absolute inset-0 h-full w-full"
-                    fitBoundsPaddingRight={60}
-                  />
+                  <Suspense fallback={<div className="h-full w-full bg-secondary/30" />}>
+                    <ThermalMap
+                      routes={previewRoute}
+                      activeRouteId="preview-route"
+                      tiles={tiles}
+                      className="absolute inset-0 h-full w-full"
+                      fitBoundsPaddingRight={60}
+                    />
+                  </Suspense>
                 ) : (
                   <div className="grid h-full w-full place-items-center bg-secondary/30 text-sm text-muted-foreground">
                     Map preview unavailable

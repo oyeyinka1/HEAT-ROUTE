@@ -1,29 +1,44 @@
 import { c as createServerFn } from "./createServerFn-CIHAFgYl.mjs";
 import { i as objectType, n as arrayType, o as tupleType, r as numberType, t as anyType } from "../_libs/zod.mjs";
+import { t as calculateRouteThermalMetrics } from "./fortyguard-types-CAWfqUS8.mjs";
 import { t as createServerRpc } from "./createServerRpc-B90ckaqP.mjs";
 import * as fs from "node:fs";
 import * as path from "node:path";
-//#region node_modules/.nitro/vite/services/ssr/assets/fortyguard-B7HJYPNz.js
-var CACHE_DIR = path.resolve(process.cwd(), ".cache");
-var CACHE_FILE = path.join(CACHE_DIR, "fortyguard_tiles_cache.json");
-var HIGH_HEAT_THRESHOLD_C = 38;
-/**
-* Ray-casting algorithm for Point in Polygon check
-* pt: [lon, lat], polygon: [[lon, lat], ...]
-*/
-function isPointInPolygon(pt, polygon) {
-	const [x, y] = pt;
-	let inside = false;
-	for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-		const [xi, yi] = polygon[i];
-		const [xj, yj] = polygon[j];
-		if (yi > y !== yj > y && x < (xj - xi) * (y - yi) / (yj - yi) + xi) inside = !inside;
+//#region node_modules/.nitro/vite/services/ssr/assets/fortyguard-Cm3-28yD.js
+/** Safe runtime check for Node.js environment with process.cwd support */
+function isNodeServer() {
+	return typeof process !== "undefined" && typeof process.cwd === "function";
+}
+function getCacheDir() {
+	if (!isNodeServer()) return null;
+	try {
+		return path.resolve(process.cwd(), ".cache");
+	} catch {
+		return null;
 	}
-	return inside;
+}
+function getCacheFile() {
+	const dir = getCacheDir();
+	return dir ? path.join(dir, "fortyguard_tiles_cache.json") : null;
 }
 function readKeyFromEnv() {
-	let key = process.env.FORTYGUARD_API_KEY || process.env.VITE_FORTYGUARD_API_KEY || process.env.FG_API_KEY;
-	if (!key) try {
+	let key;
+	if (typeof process !== "undefined" && process.env) key = process.env.FORTYGUARD_API_KEY || process.env.VITE_FORTYGUARD_API_KEY || process.env.FG_API_KEY;
+	if (!key && typeof import.meta !== "undefined" && {
+		"BASE_URL": "/",
+		"DEV": false,
+		"MODE": "production",
+		"PROD": true,
+		"SSR": true,
+		"TSS_DEV_SERVER": "false",
+		"TSS_DEV_SSR_STYLES_BASEPATH": "/",
+		"TSS_DEV_SSR_STYLES_ENABLED": "true",
+		"TSS_DISABLE_CSRF_MIDDLEWARE_WARNING": "false",
+		"TSS_INLINE_CSS_ENABLED": "false",
+		"TSS_ROUTER_BASEPATH": "",
+		"TSS_SERVER_FN_BASE": "/_serverFn/"
+	}) key = void 0;
+	if (!key && isNodeServer()) try {
 		const envPath = path.resolve(process.cwd(), ".env");
 		if (fs.existsSync(envPath)) {
 			const match = fs.readFileSync(envPath, "utf-8").match(/FORTYGUARD_API_KEY\s*=\s*(.+)/);
@@ -33,9 +48,11 @@ function readKeyFromEnv() {
 	return key;
 }
 function getCacheData() {
+	const cacheFile = getCacheFile();
+	if (!cacheFile || !isNodeServer()) return null;
 	try {
-		if (fs.existsSync(CACHE_FILE)) {
-			const raw = fs.readFileSync(CACHE_FILE, "utf-8");
+		if (fs.existsSync(cacheFile)) {
+			const raw = fs.readFileSync(cacheFile, "utf-8");
 			return JSON.parse(raw);
 		}
 	} catch (err) {
@@ -44,9 +61,12 @@ function getCacheData() {
 	return null;
 }
 function saveCacheData(data) {
+	const cacheDir = getCacheDir();
+	const cacheFile = getCacheFile();
+	if (!cacheDir || !cacheFile || !isNodeServer()) return;
 	try {
-		if (!fs.existsSync(CACHE_DIR)) fs.mkdirSync(CACHE_DIR, { recursive: true });
-		fs.writeFileSync(CACHE_FILE, JSON.stringify(data, null, 2), "utf-8");
+		if (!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir, { recursive: true });
+		fs.writeFileSync(cacheFile, JSON.stringify(data, null, 2), "utf-8");
 	} catch (err) {
 		console.warn("[FortyGuard Service] Failed to write cache file:", err);
 	}
@@ -452,60 +472,12 @@ var getTemperatureHeatmap = createServerFn({ method: "POST" }).validator(objectT
 		inFlightHeatmaps.delete(bboxKey);
 	}
 });
-function calculateRouteThermalMetrics(routeCoordinates, durationMin, tiles, defaultBaselineTempC = 38.2, samplePointsCount = 20, thresholdC = HIGH_HEAT_THRESHOLD_C) {
-	if (!routeCoordinates || routeCoordinates.length === 0) return {
-		peakTempC: defaultBaselineTempC,
-		avgTempC: defaultBaselineTempC,
-		highHeatMinutes: 0,
-		sampledPointsCount: 0
-	};
-	const sampledPoints = [];
-	const totalCoords = routeCoordinates.length;
-	if (totalCoords <= samplePointsCount) sampledPoints.push(...routeCoordinates);
-	else for (let i = 0; i < samplePointsCount; i++) {
-		const idx = Math.min(Math.floor(i / (samplePointsCount - 1) * (totalCoords - 1)), totalCoords - 1);
-		sampledPoints.push(routeCoordinates[idx]);
-	}
-	const sampledTemps = [];
-	sampledPoints.forEach((pt) => {
-		let matchedTile;
-		for (const tile of tiles) {
-			const [minX, minY, maxX, maxY] = tile.bbox;
-			if (pt[0] >= minX && pt[0] <= maxX && pt[1] >= minY && pt[1] <= maxY) {
-				if (isPointInPolygon(pt, tile.polygon)) {
-					matchedTile = tile;
-					break;
-				}
-			}
-		}
-		if (matchedTile) sampledTemps.push(matchedTile.averageTempC);
-		else if (tiles.length > 0) {
-			let closestTile = tiles[0];
-			let minDist = Infinity;
-			for (const t of tiles) {
-				const d = Math.hypot(pt[0] - t.polygon[0][0], pt[1] - t.polygon[0][1]);
-				if (d < minDist) {
-					minDist = d;
-					closestTile = t;
-				}
-			}
-			sampledTemps.push(closestTile.averageTempC);
-		} else sampledTemps.push(defaultBaselineTempC);
-	});
-	const peakTempC = Number(Math.max(...sampledTemps).toFixed(1));
-	const avgTempC = Number((sampledTemps.reduce((acc, v) => acc + v, 0) / sampledTemps.length).toFixed(1));
-	const highHeatPoints = sampledTemps.filter((t) => t >= thresholdC).length;
-	return {
-		peakTempC,
-		avgTempC,
-		highHeatMinutes: Math.round(highHeatPoints / sampledTemps.length * durationMin),
-		sampledPointsCount: sampledTemps.length
-	};
-}
 var FORECAST_CACHE_PREFIX = "fg_forecast_slot_";
 function getSlotCache(key) {
+	const cacheDir = getCacheDir();
+	if (!cacheDir || !isNodeServer()) return null;
 	try {
-		const file = path.join(CACHE_DIR, `${FORECAST_CACHE_PREFIX}${key}.json`);
+		const file = path.join(cacheDir, `${FORECAST_CACHE_PREFIX}${key}.json`);
 		if (fs.existsSync(file)) {
 			const raw = fs.readFileSync(file, "utf-8");
 			return JSON.parse(raw);
@@ -516,33 +488,22 @@ function getSlotCache(key) {
 	return null;
 }
 function saveSlotCache(key, tiles) {
+	const cacheDir = getCacheDir();
+	if (!cacheDir || !isNodeServer()) return;
 	try {
-		if (!fs.existsSync(CACHE_DIR)) fs.mkdirSync(CACHE_DIR, { recursive: true });
-		const file = path.join(CACHE_DIR, `${FORECAST_CACHE_PREFIX}${key}.json`);
+		if (!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir, { recursive: true });
+		const file = path.join(cacheDir, `${FORECAST_CACHE_PREFIX}${key}.json`);
 		fs.writeFileSync(file, JSON.stringify(tiles, null, 2), "utf-8");
 	} catch (err) {
 		console.warn(`[FortyGuard Service] Slot cache write failed for ${key}:`, err);
 	}
 }
 /**
-* Server function to fetch real FortyGuard 12-hour forecast at 5 time offsets:
-* Now (+0h), +3h, +6h, +9h, +12h.
-* Returns real peak/avg temperatures per slot or marks slot as unavailable if failed.
+* Core forecast evaluation function executed on the server.
 */
-var getRouteForecast_createServerFn_handler = createServerRpc({
-	id: "a6f30602e4362437b274a3a6b2c7fe6920610c50e043e40cc2c8b1c3f9b6eac6",
-	name: "getRouteForecast",
-	filename: "src/lib/fortyguard.ts"
-}, (opts) => getRouteForecast.__executeServer(opts));
-var getRouteForecast = createServerFn({ method: "POST" }).validator(objectType({
-	routeCoordinates: arrayType(tupleType([numberType(), numberType()])),
-	durationMin: numberType().default(20),
-	currentTiles: arrayType(anyType()).optional()
-})).handler(getRouteForecast_createServerFn_handler, async ({ data }) => {
+async function calculateRouteForecastDirect(routeCoords, durationMin = 20, passedTiles = []) {
 	const apiKey = readKeyFromEnv();
-	const routeCoords = data.routeCoordinates;
-	const duration = data.durationMin;
-	const passedTiles = data.currentTiles || [];
+	const duration = durationMin;
 	routeCoords[0];
 	const avgLon = routeCoords.reduce((acc, pt) => acc + pt[0], 0) / (routeCoords.length || 1);
 	const localWeather = await fetchRealAmbientWeather(routeCoords.reduce((acc, pt) => acc + pt[1], 0) / (routeCoords.length || 1), avgLon);
@@ -594,13 +555,10 @@ var getRouteForecast = createServerFn({ method: "POST" }).validator(objectType({
 				saveSlotCache(cacheKey, tiles);
 			}
 		}
-		if (!tiles && apiKey) if (inFlightSlotFetches.has(cacheKey)) {
-			console.info(`[FortyGuard Forecast] Reusing in-flight task for slot ${def.label} (${cacheKey})`);
-			tiles = await inFlightSlotFetches.get(cacheKey);
-		} else {
+		if (!tiles && apiKey) if (inFlightSlotFetches.has(cacheKey)) tiles = await inFlightSlotFetches.get(cacheKey);
+		else {
 			const fetchPromise = (async () => {
 				try {
-					console.info(`[FortyGuard Forecast] Submitting parallel task for slot ${def.label} (${def.date} ${def.time})...`);
 					const https = await import("node:https");
 					const payload = JSON.stringify({
 						polygon_aoi: aoi,
@@ -624,7 +582,7 @@ var getRouteForecast = createServerFn({ method: "POST" }).validator(objectType({
 								"User-Agent": "HeatRoute-Navigator/1.0",
 								"Content-Length": Buffer.byteLength(payload)
 							},
-							timeout: 15e3
+							timeout: 1e4
 						}, (res) => {
 							let raw = "";
 							res.on("data", (c) => raw += c);
@@ -646,7 +604,7 @@ var getRouteForecast = createServerFn({ method: "POST" }).validator(objectType({
 						req.write(payload);
 						req.end();
 					});
-					const rawFeatures = (await pollFortyGuardStatus(apiKey, actId, 15e3, 2e3)).result?.map_data?.features || [];
+					const rawFeatures = (await pollFortyGuardStatus(apiKey, actId, 1e4, 2e3)).result?.map_data?.features || [];
 					if (rawFeatures.length > 0) {
 						const fetchedTiles = rawFeatures.map((f) => {
 							const coords = f.geometry?.coordinates?.[0] || [];
@@ -659,9 +617,9 @@ var getRouteForecast = createServerFn({ method: "POST" }).validator(objectType({
 							});
 							return {
 								id: String(f.properties?.tile_id || f.id),
-								averageTempC: Number(f.properties?.average_temperature?.toFixed(1) ?? 28),
-								minTempC: Number(f.properties?.min_temperature?.toFixed(1) ?? 28),
-								maxTempC: Number(f.properties?.max_temperature?.toFixed(1) ?? 28),
+								averageTempC: Number(Number(f.properties?.avg_temp || 38).toFixed(1)),
+								minTempC: Number(Number(f.properties?.min_temp || 35).toFixed(1)),
+								maxTempC: Number(Number(f.properties?.max_temp || 42).toFixed(1)),
 								polygon: coords,
 								bbox: [
 									minX,
@@ -737,6 +695,18 @@ var getRouteForecast = createServerFn({ method: "POST" }).validator(objectType({
 		hottestSlot,
 		tiles: nowTiles
 	};
+}
+var getRouteForecast_createServerFn_handler = createServerRpc({
+	id: "a6f30602e4362437b274a3a6b2c7fe6920610c50e043e40cc2c8b1c3f9b6eac6",
+	name: "getRouteForecast",
+	filename: "src/lib/fortyguard.ts"
+}, (opts) => getRouteForecast.__executeServer(opts));
+var getRouteForecast = createServerFn({ method: "POST" }).validator(objectType({
+	routeCoordinates: arrayType(tupleType([numberType(), numberType()])),
+	durationMin: numberType().default(20),
+	currentTiles: arrayType(anyType()).optional()
+})).handler(getRouteForecast_createServerFn_handler, async ({ data }) => {
+	return calculateRouteForecastDirect(data.routeCoordinates, data.durationMin, data.currentTiles || []);
 });
 var getCoolerRerouteData_createServerFn_handler = createServerRpc({
 	id: "7773f1b38864253439cd185d954a1108c5027a663acc3c7021b9711e8aafa1ed",
@@ -745,65 +715,104 @@ var getCoolerRerouteData_createServerFn_handler = createServerRpc({
 }, (opts) => getCoolerRerouteData.__executeServer(opts));
 var getCoolerRerouteData = createServerFn({ method: "POST" }).validator(objectType({
 	routeCoordinates: arrayType(tupleType([numberType(), numberType()])),
-	durationMin: numberType().default(21)
+	durationMin: numberType().default(21),
+	currentPeakTempC: numberType().optional(),
+	currentHighHeatMinutes: numberType().optional()
 })).handler(getCoolerRerouteData_createServerFn_handler, async ({ data }) => {
-	const slotKeys = [
-		"2024-07-15_2000",
-		"2024-07-15_2300",
-		"2024-07-15_1700"
-	];
-	let tiles = null;
-	let selectedKey = slotKeys[0];
-	let cacheSource = "cold-fallback";
-	for (const key of slotKeys) {
-		const cached = getSlotCache(key);
-		if (cached && cached.length > 0) {
-			tiles = cached;
-			selectedKey = key;
-			cacheSource = "slot-cache";
-			console.info(`[CoolerReroute] ✅ Loaded real FortyGuard slot cache: "${key}" — ${cached.length} tile polygons from .cache/fg_forecast_slot_${key}.json`);
-			break;
-		}
+	try {
+		const coords = data.routeCoordinates;
+		if (!coords || coords.length === 0) return {
+			route: {},
+			tiles: [],
+			timeSlotLabel: "",
+			slotKey: "",
+			cacheSource: "unavailable",
+			tileCount: 0,
+			available: false,
+			hasCoolerOption: false,
+			statusNotice: "Condition simulation unavailable for this location right now"
+		};
+		const forecast = await calculateRouteForecastDirect(coords, data.durationMin, []);
+		if (!forecast || !forecast.slots || forecast.slots.length === 0) return {
+			route: {},
+			tiles: [],
+			timeSlotLabel: "",
+			slotKey: "",
+			cacheSource: "unavailable",
+			tileCount: 0,
+			available: false,
+			hasCoolerOption: false,
+			statusNotice: "Condition simulation unavailable for this location right now"
+		};
+		const availableSlots = forecast.slots.filter((s) => s.available && s.peakTempC !== void 0);
+		const futureSlots = availableSlots.filter((s) => s.offsetHours > 0);
+		const coolestSlot = futureSlots.length > 0 ? [...futureSlots].sort((a, b) => a.peakTempC - b.peakTempC)[0] : void 0;
+		const currentPeak = data.currentPeakTempC ?? availableSlots.find((s) => s.offsetHours === 0)?.peakTempC ?? 35;
+		const currentHighHeat = data.currentHighHeatMinutes ?? availableSlots.find((s) => s.offsetHours === 0)?.highHeatMinutes ?? 0;
+		const isMeaningfullyCooler = coolestSlot && coolestSlot.peakTempC !== void 0 && (coolestSlot.peakTempC < currentPeak - .4 || (coolestSlot.highHeatMinutes ?? 0) < currentHighHeat);
+		const returnedTiles = forecast.tiles && forecast.tiles.length > 0 ? forecast.tiles : [];
+		console.info(`[Demo Reroute Server] Active Route (${coords.length} pts, ${data.durationMin}m): CurrentPeak=${currentPeak.toFixed(1)}°C, CurrentHighHeat=${currentHighHeat}m | CoolestFuture=${coolestSlot?.label ?? "None"} (${coolestSlot?.peakTempC?.toFixed(1) ?? "N/A"}°C) | isMeaningfullyCooler=${isMeaningfullyCooler}`);
+		if (!isMeaningfullyCooler || !coolestSlot) return {
+			route: {
+				id: "r-cooler",
+				kind: "heat-safe",
+				label: "Cooler Alternative",
+				geometry: coords,
+				recommended: false,
+				metrics: {
+					durationMin: data.durationMin,
+					distanceKm: 0,
+					peakTempC: coolestSlot?.peakTempC ?? currentPeak,
+					avgTempC: coolestSlot?.avgTempC ?? currentPeak,
+					highHeatMinutes: coolestSlot?.highHeatMinutes ?? currentHighHeat
+				}
+			},
+			tiles: returnedTiles,
+			timeSlotLabel: coolestSlot?.label || "Current window",
+			slotKey: "forecast-live-evaluation",
+			cacheSource: "dynamic-grid",
+			tileCount: returnedTiles.length,
+			available: true,
+			hasCoolerOption: false,
+			message: "You're already on the best option, no cooler alternative found right now."
+		};
+		return {
+			route: {
+				id: "r-cooler",
+				kind: "heat-safe",
+				label: "Cooler Alternative",
+				geometry: coords,
+				recommended: true,
+				metrics: {
+					durationMin: data.durationMin,
+					distanceKm: 0,
+					peakTempC: coolestSlot.peakTempC,
+					avgTempC: coolestSlot.avgTempC ?? coolestSlot.peakTempC,
+					highHeatMinutes: coolestSlot.highHeatMinutes ?? 0
+				}
+			},
+			tiles: returnedTiles,
+			timeSlotLabel: coolestSlot.label,
+			slotKey: `slot-${coolestSlot.offsetHours}h`,
+			cacheSource: "dynamic-grid",
+			tileCount: returnedTiles.length,
+			available: true,
+			hasCoolerOption: true
+		};
+	} catch (err) {
+		console.warn("[CoolerReroute] Failed to evaluate condition change:", err);
+		return {
+			route: {},
+			tiles: [],
+			timeSlotLabel: "",
+			slotKey: "",
+			cacheSource: "unavailable",
+			tileCount: 0,
+			available: false,
+			hasCoolerOption: false,
+			statusNotice: "Condition simulation unavailable for this location right now"
+		};
 	}
-	if (!tiles || tiles.length === 0) {
-		const generalCache = getCacheData();
-		if (generalCache && generalCache.tiles.length > 0) {
-			cacheSource = "general-cache";
-			tiles = generalCache.tiles.map((t) => ({
-				...t,
-				averageTempC: Math.max(30, Number((t.averageTempC - 4.5).toFixed(1))),
-				peakTempC: Math.max(31, Number((t.maxTempC - 4.5).toFixed(1)))
-			}));
-			console.info(`[CoolerReroute] ⚠️ Slot cache empty — using general cache with -4.5°C evening offset (${tiles.length} tiles). Run getRouteForecast first to populate real slot cache.`);
-		} else {
-			tiles = [];
-			console.warn("[CoolerReroute] ❌ No cache available — returning cold fallback (empty tile set).");
-		}
-	}
-	const thermal = calculateRouteThermalMetrics(data.routeCoordinates, data.durationMin, tiles, 33.5);
-	const slotLabel = selectedKey.includes("2000") ? "+6h (8:00 PM)" : selectedKey.includes("2300") ? "+9h (11:00 PM)" : "+3h (5:00 PM)";
-	console.info(`[CoolerReroute] 📊 Metrics from slot "${selectedKey}" (${slotLabel}):`, `peakTempC=${thermal.peakTempC.toFixed(1)}°C,`, `avgTempC=${thermal.avgTempC.toFixed(1)}°C,`, `highHeatMin=${thermal.highHeatMinutes}min,`, `tileCount=${tiles.length},`, `source=${cacheSource}`);
-	return {
-		route: {
-			id: "r-cooler",
-			kind: "heat-safe",
-			label: "Cooler Alternative",
-			geometry: data.routeCoordinates,
-			recommended: true,
-			metrics: {
-				durationMin: data.durationMin,
-				distanceKm: 0,
-				peakTempC: thermal.peakTempC,
-				avgTempC: thermal.avgTempC,
-				highHeatMinutes: thermal.highHeatMinutes
-			}
-		},
-		tiles,
-		timeSlotLabel: slotLabel,
-		slotKey: selectedKey,
-		cacheSource,
-		tileCount: tiles.length
-	};
 });
 //#endregion
 export { getCoolerRerouteData_createServerFn_handler, getRouteForecast_createServerFn_handler, getTemperatureHeatmap_createServerFn_handler };

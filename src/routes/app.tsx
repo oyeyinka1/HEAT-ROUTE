@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState, useRef } from "react";
+import { useEffect, useMemo, useState, useRef, lazy, Suspense } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -19,7 +19,10 @@ import {
   X,
 } from "lucide-react";
 import { RouteCard } from "@/components/heatroute/RouteCard";
-import { ThermalLegend, ThermalMap } from "@/components/heatroute/ThermalMap";
+import { ThermalLegend } from "@/components/heatroute/ThermalMap";
+const ThermalMap = lazy(() =>
+  import("@/components/heatroute/ThermalMap").then((m) => ({ default: m.ThermalMap })),
+);
 import {
   analysisStages,
   navSteps,
@@ -32,12 +35,14 @@ import {
 import { getWalkingRoutes, type DirectionsResult } from "@/lib/directions";
 import { searchPlaces, type GeocodeSuggestion } from "@/lib/geocoding";
 import {
-  getTemperatureHeatmap,
   calculateRouteThermalMetrics,
-  getCoolerRerouteData,
-  getRouteForecast,
   type FortyGuardHeatmapResult,
   type TemperatureTile,
+} from "@/lib/fortyguard-types";
+import {
+  getTemperatureHeatmap,
+  getCoolerRerouteData,
+  getRouteForecast,
 } from "@/lib/fortyguard";
 import {
   selectRecommendedRoute,
@@ -285,8 +290,8 @@ function HeatRouteApp() {
             const thermal = calculateRouteThermalMetrics(fetched.coordinates, durationMin, currentTiles);
 
             return {
-              id: isAlt ? "r-direct" : "r-heat-safe",
-              kind: (isAlt ? "direct" : "heat-safe") as RouteOption["kind"],
+              id: isAlt ? "r-fastest" : "r-heat-safe",
+              kind: (isAlt ? "fastest" : "heat-safe") as RouteOption["kind"],
               label: isAlt ? "Fastest Route" : "Heat-Safe",
               geometry: fetched.coordinates,
               steps: fetched.steps ?? [],
@@ -461,11 +466,18 @@ function HeatRouteApp() {
         data: {
           routeCoordinates: activeCoords,
           durationMin: Math.max(15, (activeRoute?.metrics.durationMin ?? 20) + 1),
+          currentPeakTempC: activeRoute?.metrics.peakTempC,
+          currentHighHeatMinutes: activeRoute?.metrics.highHeatMinutes,
         },
       });
 
       if (!rerouteData.available || rerouteData.cacheSource === "unavailable") {
         setRerouteNotice(rerouteData.statusNotice || "Condition simulation unavailable for this location right now");
+        return;
+      }
+
+      if (!rerouteData.hasCoolerOption) {
+        setRerouteNotice(rerouteData.message || "You're already on the best option, no cooler alternative found right now.");
         return;
       }
 
@@ -523,14 +535,16 @@ function HeatRouteApp() {
 
   return (
     <main className="relative h-[100dvh] w-full overflow-hidden bg-background">
-      <ThermalMap
-        routes={mapRoutes}
-        activeRouteId={selected?.id}
-        onSelectRoute={phase === "routes" ? setSelectedId : undefined}
-        drawKey={`${phase}-${routes.map((r) => r.id).join("-")}`}
-        {...(progress !== undefined ? { progress } : {})}
-        dim={phase === "analyzing"}
-      />
+      <Suspense fallback={<div className="absolute inset-0 bg-background" />}>
+        <ThermalMap
+          routes={mapRoutes}
+          activeRouteId={selected?.id}
+          onSelectRoute={phase === "routes" ? setSelectedId : undefined}
+          drawKey={`${phase}-${routes.map((r) => r.id).join("-")}`}
+          {...(progress !== undefined ? { progress } : {})}
+          dim={phase === "analyzing"}
+        />
+      </Suspense>
 
       <TopBar
         temp={selected?.metrics?.peakTempC ?? null}

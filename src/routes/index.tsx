@@ -91,7 +91,7 @@ function Hero() {
       <img
         src="/images/heat-reference.png"
         alt="Urban heat route background"
-        className="absolute inset-0 h-full w-full object-cover object-[center_35%]"
+        className="absolute inset-0 h-full w-full object-cover object-[center_35%] pointer-events-none"
       />
 
       {/* Dark gradient overlay for text contrast and seamless readability */}

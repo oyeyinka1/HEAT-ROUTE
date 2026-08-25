@@ -1,9 +1,46 @@
-import { r as __toESM } from "../_runtime.mjs";
+// SSR Browser Globals Polyfill
+if (typeof self === "undefined") globalThis.self = globalThis;
+if (typeof window === "undefined") globalThis.window = globalThis;
+if (typeof screen === "undefined") globalThis.screen = {
+	deviceXDPI: 96,
+	logicalXDPI: 96
+};
+if (typeof devicePixelRatio === "undefined") globalThis.devicePixelRatio = 1;
+if (typeof navigator === "undefined") globalThis.navigator = {
+	userAgent: "",
+	platform: ""
+};
+if (typeof document === "undefined") {
+	const noop = () => ({});
+	const fakeEl = () => ({
+		style: {},
+		setAttribute: noop,
+		getAttribute: noop,
+		appendChild: noop,
+		getContext: () => null
+	});
+	globalThis.document = {
+		documentElement: { style: {} },
+		createElement: fakeEl,
+		createElementNS: fakeEl,
+		getElementsByTagName: () => [],
+		querySelector: () => null,
+		querySelectorAll: () => [],
+		addEventListener: noop,
+		removeEventListener: noop,
+		createTextNode: noop,
+		head: { appendChild: noop },
+		body: { appendChild: noop }
+	};
+}
+// End SSR Browser Globals Polyfill
+import { i as __toESM } from "../_runtime.mjs";
 import { c as createServerFn, i as TSS_SERVER_FUNCTION } from "./createServerFn-CIHAFgYl.mjs";
-import { n as require_jsx_runtime, r as require_react } from "../_libs/react+tanstack__react-query.mjs";
+import { S as require_react } from "../_libs/@react-leaflet/core+[...].mjs";
+import { n as require_jsx_runtime } from "../_libs/react+tanstack__react-query.mjs";
 import { t as getServerFnById } from "../__23tanstack-start-server-fn-resolver-CWJmh1BE.mjs";
 import { i as objectType, n as arrayType, o as tupleType, r as numberType, t as anyType } from "../_libs/zod.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/fortyguard-CV79_jNr.js
+//#region node_modules/.nitro/vite/services/ssr/assets/fortyguard-BUVJT9Hj.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 function ThermalLegend({ className = "" }) {
@@ -210,13 +247,7 @@ function ClientMap({ routes, activeRouteId, onSelectRoute, progress, dim = false
 function InteractiveMap(props) {
 	const [libs, setLibs] = (0, import_react.useState)(null);
 	(0, import_react.useEffect)(() => {
-		Promise.all([import(
-			/* @vite-ignore */
-			"leaflet"
-), import(
-			/* @vite-ignore */
-			"react-leaflet"
-)]).then(([L, RL]) => {
+		Promise.all([import("../_libs/@react-leaflet/core+[...].mjs").then((n) => /* @__PURE__ */ __toESM(n.b())), import("../_libs/react-leaflet.mjs").then((n) => n.t)]).then(([L, RL]) => {
 			setLibs({
 				L: L.default || L,
 				RL

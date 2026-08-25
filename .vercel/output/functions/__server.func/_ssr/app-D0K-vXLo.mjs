@@ -34,18 +34,32 @@ if (typeof document === "undefined") {
 	};
 }
 // End SSR Browser Globals Polyfill
-import { i as HTTPError, r as toRequest } from "../_libs/h3+rou3+srvx.mjs";
-//#region node_modules/nitro/dist/runtime/vite.mjs
-function fetchViteEnv(viteEnvName, input, init) {
-	const viteEnv = (globalThis.__nitro_vite_envs__ || {})[viteEnvName];
-	if (!viteEnv) throw HTTPError.status(404);
-	return Promise.resolve(viteEnv.fetch(toRequest(input, init)));
-}
+import { f as lazyRouteComponent, p as createFileRoute } from "../_libs/@tanstack/react-router+[...].mjs";
+//#region node_modules/.nitro/vite/services/ssr/assets/app-D0K-vXLo.js
+var $$splitComponentImporter = () => import("./app-Ct_laTQo.mjs");
+var Route = createFileRoute("/app")({
+	head: () => ({ meta: [
+		{ title: "HeatRoute — Heat-aware walking navigation" },
+		{
+			name: "description",
+			content: "Enter a destination and compare walking routes by high-heat exposure, peak temperature and travel time before you start navigating."
+		},
+		{
+			property: "og:title",
+			content: "HeatRoute — Heat-aware walking navigation"
+		},
+		{
+			property: "og:description",
+			content: "Compare fastest and heat-safe walking routes using street-level temperature intelligence."
+		}
+	] }),
+	loader: async () => {
+		return {
+			directions: null,
+			heatmap: null
+		};
+	},
+	component: lazyRouteComponent($$splitComponentImporter, "component")
+});
 //#endregion
-//#region node_modules/nitro/dist/runtime/internal/vite/ssr-renderer.mjs
-/** @param {{ req: Request }} HTTPEvent */
-function ssrRenderer({ req }) {
-	return fetchViteEnv("ssr", req);
-}
-//#endregion
-export { ssrRenderer as default };
+export { Route as t };

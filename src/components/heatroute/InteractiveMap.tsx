@@ -285,15 +285,15 @@ export function InteractiveMap(props: InteractiveMapProps) {
   const [libs, setLibs] = useState<{ L: LeafletLib; RL: ReactLeafletLib } | null>(null);
 
   useEffect(() => {
-    // Only import leaflet on the client — never bundle or evaluate during SSR
-    const leafletPkg = "leaflet";
-    const reactLeafletPkg = "react-leaflet";
-    Promise.all([
-      import(/* @vite-ignore */ leafletPkg),
-      import(/* @vite-ignore */ reactLeafletPkg),
-    ]).then(([L, RL]) => {
-      setLibs({ L: L.default || L, RL });
-    });
+    // Leaflet accesses browser globals (window, document) at import time.
+    // We import it dynamically here (client-only, after mount) so it never
+    // executes during SSR. The self/window polyfills in server.ts prevent
+    // any crash if it somehow gets evaluated server-side.
+    Promise.all([import("leaflet"), import("react-leaflet")]).then(
+      ([L, RL]) => {
+        setLibs({ L: L.default || L, RL });
+      },
+    );
   }, []);
 
   if (!libs) {

@@ -1,9 +1,46 @@
-import { r as __toESM } from "../_runtime.mjs";
+// SSR Browser Globals Polyfill
+if (typeof self === "undefined") globalThis.self = globalThis;
+if (typeof window === "undefined") globalThis.window = globalThis;
+if (typeof screen === "undefined") globalThis.screen = {
+	deviceXDPI: 96,
+	logicalXDPI: 96
+};
+if (typeof devicePixelRatio === "undefined") globalThis.devicePixelRatio = 1;
+if (typeof navigator === "undefined") globalThis.navigator = {
+	userAgent: "",
+	platform: ""
+};
+if (typeof document === "undefined") {
+	const noop = () => ({});
+	const fakeEl = () => ({
+		style: {},
+		setAttribute: noop,
+		getAttribute: noop,
+		appendChild: noop,
+		getContext: () => null
+	});
+	globalThis.document = {
+		documentElement: { style: {} },
+		createElement: fakeEl,
+		createElementNS: fakeEl,
+		getElementsByTagName: () => [],
+		querySelector: () => null,
+		querySelectorAll: () => [],
+		addEventListener: noop,
+		removeEventListener: noop,
+		createTextNode: noop,
+		head: { appendChild: noop },
+		body: { appendChild: noop }
+	};
+}
+// End SSR Browser Globals Polyfill
+import { i as __toESM } from "../_runtime.mjs";
 import { c as HeadContent, d as Outlet, f as lazyRouteComponent, g as useRouter, h as Link, m as createRootRouteWithContext, p as createFileRoute, s as Scripts, u as createRouter } from "../_libs/@tanstack/react-router+[...].mjs";
-import { n as require_jsx_runtime, r as require_react, t as QueryClientProvider } from "../_libs/react+tanstack__react-query.mjs";
-import { t as Route$3 } from "./app-AXRQghhP.mjs";
+import { S as require_react } from "../_libs/@react-leaflet/core+[...].mjs";
+import { n as require_jsx_runtime, t as QueryClientProvider } from "../_libs/react+tanstack__react-query.mjs";
+import { t as Route$3 } from "./app-D0K-vXLo.mjs";
 import { t as QueryClient } from "../_libs/tanstack__query-core.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/router-LYwy7E7I.js
+//#region node_modules/.nitro/vite/services/ssr/assets/router-BtcleHuZ.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 var styles_default = "/assets/styles-DsuH0kVR.css";
@@ -195,7 +232,7 @@ var Route$1 = createFileRoute("/")({
 	] }),
 	component: lazyRouteComponent($$splitComponentImporter$1, "component")
 });
-var $$splitComponentImporter = () => import("./heat-intelligence-DMB0klsF.mjs");
+var $$splitComponentImporter = () => import("./heat-intelligence-DDO2sg8h.mjs");
 var Route = createFileRoute("/heat-intelligence")({
 	head: () => ({ meta: [
 		{ title: "Heat Intelligence — HeatRoute" },

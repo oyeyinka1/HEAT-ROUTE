@@ -1,3 +1,39 @@
+// SSR Browser Globals Polyfill
+if (typeof self === "undefined") globalThis.self = globalThis;
+if (typeof window === "undefined") globalThis.window = globalThis;
+if (typeof screen === "undefined") globalThis.screen = {
+	deviceXDPI: 96,
+	logicalXDPI: 96
+};
+if (typeof devicePixelRatio === "undefined") globalThis.devicePixelRatio = 1;
+if (typeof navigator === "undefined") globalThis.navigator = {
+	userAgent: "",
+	platform: ""
+};
+if (typeof document === "undefined") {
+	const noop = () => ({});
+	const fakeEl = () => ({
+		style: {},
+		setAttribute: noop,
+		getAttribute: noop,
+		appendChild: noop,
+		getContext: () => null
+	});
+	globalThis.document = {
+		documentElement: { style: {} },
+		createElement: fakeEl,
+		createElementNS: fakeEl,
+		getElementsByTagName: () => [],
+		querySelector: () => null,
+		querySelectorAll: () => [],
+		addEventListener: noop,
+		removeEventListener: noop,
+		createTextNode: noop,
+		head: { appendChild: noop },
+		body: { appendChild: noop }
+	};
+}
+// End SSR Browser Globals Polyfill
 import { c as createServerFn } from "./createServerFn-CIHAFgYl.mjs";
 import { a as stringType, i as objectType, o as tupleType, r as numberType } from "../_libs/zod.mjs";
 import { t as createServerRpc } from "./createServerRpc-B90ckaqP.mjs";

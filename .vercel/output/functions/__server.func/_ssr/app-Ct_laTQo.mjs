@@ -1,14 +1,51 @@
-import { r as __toESM } from "../_runtime.mjs";
+// SSR Browser Globals Polyfill
+if (typeof self === "undefined") globalThis.self = globalThis;
+if (typeof window === "undefined") globalThis.window = globalThis;
+if (typeof screen === "undefined") globalThis.screen = {
+	deviceXDPI: 96,
+	logicalXDPI: 96
+};
+if (typeof devicePixelRatio === "undefined") globalThis.devicePixelRatio = 1;
+if (typeof navigator === "undefined") globalThis.navigator = {
+	userAgent: "",
+	platform: ""
+};
+if (typeof document === "undefined") {
+	const noop = () => ({});
+	const fakeEl = () => ({
+		style: {},
+		setAttribute: noop,
+		getAttribute: noop,
+		appendChild: noop,
+		getContext: () => null
+	});
+	globalThis.document = {
+		documentElement: { style: {} },
+		createElement: fakeEl,
+		createElementNS: fakeEl,
+		getElementsByTagName: () => [],
+		querySelector: () => null,
+		querySelectorAll: () => [],
+		addEventListener: noop,
+		removeEventListener: noop,
+		createTextNode: noop,
+		head: { appendChild: noop },
+		body: { appendChild: noop }
+	};
+}
+// End SSR Browser Globals Polyfill
+import { i as __toESM } from "../_runtime.mjs";
 import { h as Link } from "../_libs/@tanstack/react-router+[...].mjs";
 import { c as createServerFn } from "./createServerFn-CIHAFgYl.mjs";
 import { t as calculateRouteThermalMetrics } from "./fortyguard-types-CAWfqUS8.mjs";
-import { n as require_jsx_runtime, r as require_react } from "../_libs/react+tanstack__react-query.mjs";
-import { t as Route } from "./app-AXRQghhP.mjs";
+import { S as require_react } from "../_libs/@react-leaflet/core+[...].mjs";
+import { n as require_jsx_runtime } from "../_libs/react+tanstack__react-query.mjs";
+import { t as Route } from "./app-D0K-vXLo.mjs";
 import { a as routeAnalysis, i as routeAccent, n as fastestGeometryCoords, r as navSteps, t as analysisStages } from "./heatroute-data-ClpyG0yJ.mjs";
 import { a as stringType, i as objectType, o as tupleType, r as numberType } from "../_libs/zod.mjs";
-import { a as getRouteForecast, i as getCoolerRerouteData, n as ThermalMap, o as getTemperatureHeatmap, r as createSsrRpc, t as ThermalLegend } from "./fortyguard-CV79_jNr.mjs";
+import { a as getRouteForecast, i as getCoolerRerouteData, n as ThermalMap, o as getTemperatureHeatmap, r as createSsrRpc, t as ThermalLegend } from "./fortyguard-BUVJT9Hj.mjs";
 import { C as Check, S as ChevronRight, T as ArrowLeft, _ as Footprints, a as Thermometer, b as Clock, d as Navigation, g as Layers, h as LoaderCircle, l as Search, m as LocateFixed, p as MapPin, r as TriangleAlert, s as Sparkles, t as X, v as Flame, w as ArrowRight } from "../_libs/lucide-react.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/app-BsFfUUE7.js
+//#region node_modules/.nitro/vite/services/ssr/assets/app-Ct_laTQo.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 function RouteCard({ route, selected, onSelect, isNearTie = false }) {

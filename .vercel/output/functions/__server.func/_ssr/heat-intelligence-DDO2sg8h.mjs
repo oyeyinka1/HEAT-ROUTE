@@ -1,9 +1,46 @@
-import { r as __toESM } from "../_runtime.mjs";
+// SSR Browser Globals Polyfill
+if (typeof self === "undefined") globalThis.self = globalThis;
+if (typeof window === "undefined") globalThis.window = globalThis;
+if (typeof screen === "undefined") globalThis.screen = {
+	deviceXDPI: 96,
+	logicalXDPI: 96
+};
+if (typeof devicePixelRatio === "undefined") globalThis.devicePixelRatio = 1;
+if (typeof navigator === "undefined") globalThis.navigator = {
+	userAgent: "",
+	platform: ""
+};
+if (typeof document === "undefined") {
+	const noop = () => ({});
+	const fakeEl = () => ({
+		style: {},
+		setAttribute: noop,
+		getAttribute: noop,
+		appendChild: noop,
+		getContext: () => null
+	});
+	globalThis.document = {
+		documentElement: { style: {} },
+		createElement: fakeEl,
+		createElementNS: fakeEl,
+		getElementsByTagName: () => [],
+		querySelector: () => null,
+		querySelectorAll: () => [],
+		addEventListener: noop,
+		removeEventListener: noop,
+		createTextNode: noop,
+		head: { appendChild: noop },
+		body: { appendChild: noop }
+	};
+}
+// End SSR Browser Globals Polyfill
+import { i as __toESM } from "../_runtime.mjs";
 import { h as Link } from "../_libs/@tanstack/react-router+[...].mjs";
-import { n as require_jsx_runtime, r as require_react } from "../_libs/react+tanstack__react-query.mjs";
-import { a as getRouteForecast, n as ThermalMap, t as ThermalLegend } from "./fortyguard-CV79_jNr.mjs";
+import { S as require_react } from "../_libs/@react-leaflet/core+[...].mjs";
+import { n as require_jsx_runtime } from "../_libs/react+tanstack__react-query.mjs";
+import { a as getRouteForecast, n as ThermalMap, t as ThermalLegend } from "./fortyguard-BUVJT9Hj.mjs";
 import { T as ArrowLeft, a as Thermometer, b as Clock, h as LoaderCircle, n as Wind, o as Sun, v as Flame, w as ArrowRight, x as CircleAlert, y as Compass } from "../_libs/lucide-react.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/heat-intelligence-DMB0klsF.js
+//#region node_modules/.nitro/vite/services/ssr/assets/heat-intelligence-DDO2sg8h.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 function HeatIntelligence() {

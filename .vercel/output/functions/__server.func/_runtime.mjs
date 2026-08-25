@@ -1,3 +1,39 @@
+// SSR Browser Globals Polyfill
+if (typeof self === "undefined") globalThis.self = globalThis;
+if (typeof window === "undefined") globalThis.window = globalThis;
+if (typeof screen === "undefined") globalThis.screen = {
+	deviceXDPI: 96,
+	logicalXDPI: 96
+};
+if (typeof devicePixelRatio === "undefined") globalThis.devicePixelRatio = 1;
+if (typeof navigator === "undefined") globalThis.navigator = {
+	userAgent: "",
+	platform: ""
+};
+if (typeof document === "undefined") {
+	const noop = () => ({});
+	const fakeEl = () => ({
+		style: {},
+		setAttribute: noop,
+		getAttribute: noop,
+		appendChild: noop,
+		getContext: () => null
+	});
+	globalThis.document = {
+		documentElement: { style: {} },
+		createElement: fakeEl,
+		createElementNS: fakeEl,
+		getElementsByTagName: () => [],
+		querySelector: () => null,
+		querySelectorAll: () => [],
+		addEventListener: noop,
+		removeEventListener: noop,
+		createTextNode: noop,
+		head: { appendChild: noop },
+		body: { appendChild: noop }
+	};
+}
+// End SSR Browser Globals Polyfill
 import { createRequire } from "node:module";
 //#region \0rolldown/runtime.js
 var __create = Object.create;
@@ -7,6 +43,15 @@ var __getOwnPropNames = Object.getOwnPropertyNames;
 var __getProtoOf = Object.getPrototypeOf;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
 var __commonJSMin = (cb, mod) => () => (mod || (cb((mod = { exports: {} }).exports, mod), cb = null), mod.exports);
+var __exportAll = (all, no_symbols) => {
+	let target = {};
+	for (var name in all) __defProp(target, name, {
+		get: all[name],
+		enumerable: true
+	});
+	if (!no_symbols) __defProp(target, Symbol.toStringTag, { value: "Module" });
+	return target;
+};
 var __copyProps = (to, from, except, desc) => {
 	if (from && typeof from === "object" || typeof from === "function") for (var keys = __getOwnPropNames(from), i = 0, n = keys.length, key; i < n; i++) {
 		key = keys[i];
@@ -23,4 +68,4 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 }) : target, mod));
 var __require = /* #__PURE__ */ (() => createRequire(import.meta.url))();
 //#endregion
-export { __require as n, __toESM as r, __commonJSMin as t };
+export { __toESM as i, __exportAll as n, __require as r, __commonJSMin as t };

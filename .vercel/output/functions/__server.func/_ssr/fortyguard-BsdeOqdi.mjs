@@ -4,22 +4,32 @@ import { t as calculateRouteThermalMetrics } from "./fortyguard-types-CAWfqUS8.m
 import { t as createServerRpc } from "./createServerRpc-B90ckaqP.mjs";
 import * as fs from "node:fs";
 import * as path from "node:path";
-//#region node_modules/.nitro/vite/services/ssr/assets/fortyguard-Cm3-28yD.js
+import * as os from "node:os";
+//#region node_modules/.nitro/vite/services/ssr/assets/fortyguard-BsdeOqdi.js
 /** Safe runtime check for Node.js environment with process.cwd support */
 function isNodeServer() {
 	return typeof process !== "undefined" && typeof process.cwd === "function";
 }
+/**
+* Returns a serverless-safe writable temporary cache directory.
+* On Vercel Functions / AWS Lambda, process.cwd() is read-only; /tmp is the only writable directory.
+*/
 function getCacheDir() {
 	if (!isNodeServer()) return null;
 	try {
-		return path.resolve(process.cwd(), ".cache");
+		const tmpBase = process.env.TMPDIR || process.env.TEMP || (typeof os !== "undefined" && typeof os.tmpdir === "function" ? os.tmpdir() : "/tmp");
+		return path.join(tmpBase, "heatroute-cache");
 	} catch {
 		return null;
 	}
 }
 function getCacheFile() {
-	const dir = getCacheDir();
-	return dir ? path.join(dir, "fortyguard_tiles_cache.json") : null;
+	try {
+		const dir = getCacheDir();
+		return dir ? path.join(dir, "fortyguard_tiles_cache.json") : null;
+	} catch {
+		return null;
+	}
 }
 function readKeyFromEnv() {
 	let key;
@@ -48,9 +58,9 @@ function readKeyFromEnv() {
 	return key;
 }
 function getCacheData() {
-	const cacheFile = getCacheFile();
-	if (!cacheFile || !isNodeServer()) return null;
 	try {
+		const cacheFile = getCacheFile();
+		if (!cacheFile || !isNodeServer()) return null;
 		if (fs.existsSync(cacheFile)) {
 			const raw = fs.readFileSync(cacheFile, "utf-8");
 			return JSON.parse(raw);
@@ -61,14 +71,14 @@ function getCacheData() {
 	return null;
 }
 function saveCacheData(data) {
-	const cacheDir = getCacheDir();
-	const cacheFile = getCacheFile();
-	if (!cacheDir || !cacheFile || !isNodeServer()) return;
 	try {
+		const cacheDir = getCacheDir();
+		const cacheFile = getCacheFile();
+		if (!cacheDir || !cacheFile || !isNodeServer()) return;
 		if (!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir, { recursive: true });
 		fs.writeFileSync(cacheFile, JSON.stringify(data, null, 2), "utf-8");
 	} catch (err) {
-		console.warn("[FortyGuard Service] Failed to write cache file:", err);
+		console.warn("[FortyGuard Service] Failed to write cache file (skipping cache):", err);
 	}
 }
 /**
@@ -488,14 +498,14 @@ function getSlotCache(key) {
 	return null;
 }
 function saveSlotCache(key, tiles) {
-	const cacheDir = getCacheDir();
-	if (!cacheDir || !isNodeServer()) return;
 	try {
+		const cacheDir = getCacheDir();
+		if (!cacheDir || !isNodeServer()) return;
 		if (!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir, { recursive: true });
 		const file = path.join(cacheDir, `${FORECAST_CACHE_PREFIX}${key}.json`);
 		fs.writeFileSync(file, JSON.stringify(tiles, null, 2), "utf-8");
 	} catch (err) {
-		console.warn(`[FortyGuard Service] Slot cache write failed for ${key}:`, err);
+		console.warn(`[FortyGuard Service] Slot cache write failed for ${key} (skipping cache):`, err);
 	}
 }
 /**

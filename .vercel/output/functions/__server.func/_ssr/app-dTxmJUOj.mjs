@@ -1,6 +1,6 @@
 import { f as lazyRouteComponent, p as createFileRoute } from "../_libs/@tanstack/react-router+[...].mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/app-CYyIEtWn.js
-var $$splitComponentImporter = () => import("./app-BbDb6nwk.mjs");
+//#region node_modules/.nitro/vite/services/ssr/assets/app-dTxmJUOj.js
+var $$splitComponentImporter = () => import("./app-DhVQgQXC.mjs");
 var Route = createFileRoute("/app")({
 	head: () => ({ meta: [
 		{ title: "HeatRoute — Heat-aware walking navigation" },

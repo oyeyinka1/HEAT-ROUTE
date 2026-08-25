@@ -2,12 +2,12 @@ import { i as __toESM } from "../_runtime.mjs";
 import { h as Link } from "../_libs/@tanstack/react-router+[...].mjs";
 import { S as require_react } from "../_libs/@react-leaflet/core+[...].mjs";
 import { n as require_jsx_runtime } from "../_libs/react+tanstack__react-query.mjs";
-import { a as getRouteForecast, t as ThermalLegend } from "./fortyguard-03YRGTLV.mjs";
+import { a as getRouteForecast, t as ThermalLegend } from "./fortyguard-CwlHdn3s.mjs";
 import { T as ArrowLeft, a as Thermometer, b as Clock, h as LoaderCircle, n as Wind, o as Sun, v as Flame, w as ArrowRight, x as CircleAlert, y as Compass } from "../_libs/lucide-react.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/heat-intelligence-BUiF9TBS.js
+//#region node_modules/.nitro/vite/services/ssr/assets/heat-intelligence-CA4w_gma.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
-var ThermalMap = (0, import_react.lazy)(() => import("./fortyguard-03YRGTLV.mjs").then((n) => n.r).then((n) => n.o).then((m) => ({ default: m.ThermalMap })));
+var ThermalMap = (0, import_react.lazy)(() => import("./fortyguard-CwlHdn3s.mjs").then((n) => n.r).then((n) => n.o).then((m) => ({ default: m.ThermalMap })));
 function HeatIntelligence() {
 	const [routeContext, setRouteContext] = (0, import_react.useState)(null);
 	const [forecastResult, setForecastResult] = (0, import_react.useState)(null);

@@ -1,11 +1,11 @@
 import { i as __toESM, n as __exportAll$1 } from "../_runtime.mjs";
-import { t as getServerFnById } from "../__23tanstack-start-server-fn-resolver-DG6ZwK-c.mjs";
+import { t as getServerFnById } from "../__23tanstack-start-server-fn-resolver-CWJmh1BE.mjs";
 import { c as createServerFn, i as TSS_SERVER_FUNCTION } from "./createServerFn-CIHAFgYl.mjs";
 import { S as require_react } from "../_libs/@react-leaflet/core+[...].mjs";
 import { n as require_jsx_runtime } from "../_libs/react+tanstack__react-query.mjs";
 import { i as objectType, n as arrayType, o as tupleType, r as numberType, t as anyType } from "../_libs/zod.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/fortyguard-03YRGTLV.js
-var fortyguard_03YRGTLV_exports = /* @__PURE__ */ __exportAll$1({
+//#region node_modules/.nitro/vite/services/ssr/assets/fortyguard-CwlHdn3s.js
+var fortyguard_CwlHdn3s_exports = /* @__PURE__ */ __exportAll$1({
 	a: () => ThermalLegend,
 	i: () => createSsrRpc,
 	n: () => getRouteForecast,
@@ -292,4 +292,4 @@ var getCoolerRerouteData = createServerFn({ method: "POST" }).validator(objectTy
 	currentHighHeatMinutes: numberType().optional()
 })).handler(createSsrRpc("7773f1b38864253439cd185d954a1108c5027a663acc3c7021b9711e8aafa1ed"));
 //#endregion
-export { getRouteForecast as a, getCoolerRerouteData as i, createSsrRpc as n, getTemperatureHeatmap as o, fortyguard_03YRGTLV_exports as r, ThermalLegend as t };
+export { getRouteForecast as a, getCoolerRerouteData as i, createSsrRpc as n, getTemperatureHeatmap as o, fortyguard_CwlHdn3s_exports as r, ThermalLegend as t };

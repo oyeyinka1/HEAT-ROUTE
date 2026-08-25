@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import * as os from "node:os";
 import {
   type TemperatureTile,
   type FortyGuardHeatmapResult,
@@ -30,18 +31,30 @@ function isNodeServer(): boolean {
   return typeof process !== "undefined" && typeof process.cwd === "function";
 }
 
+/**
+ * Returns a serverless-safe writable temporary cache directory.
+ * On Vercel Functions / AWS Lambda, process.cwd() is read-only; /tmp is the only writable directory.
+ */
 function getCacheDir(): string | null {
   if (!isNodeServer()) return null;
   try {
-    return path.resolve(process.cwd(), ".cache");
+    const tmpBase =
+      process.env.TMPDIR ||
+      process.env.TEMP ||
+      (typeof os !== "undefined" && typeof os.tmpdir === "function" ? os.tmpdir() : "/tmp");
+    return path.join(tmpBase, "heatroute-cache");
   } catch {
     return null;
   }
 }
 
 function getCacheFile(): string | null {
-  const dir = getCacheDir();
-  return dir ? path.join(dir, "fortyguard_tiles_cache.json") : null;
+  try {
+    const dir = getCacheDir();
+    return dir ? path.join(dir, "fortyguard_tiles_cache.json") : null;
+  } catch {
+    return null;
+  }
 }
 
 function readKeyFromEnv(): string | undefined {
@@ -78,9 +91,9 @@ function readKeyFromEnv(): string | undefined {
 }
 
 function getCacheData(): FortyGuardHeatmapResult | null {
-  const cacheFile = getCacheFile();
-  if (!cacheFile || !isNodeServer()) return null;
   try {
+    const cacheFile = getCacheFile();
+    if (!cacheFile || !isNodeServer()) return null;
     if (fs.existsSync(cacheFile)) {
       const raw = fs.readFileSync(cacheFile, "utf-8");
       return JSON.parse(raw);
@@ -92,16 +105,17 @@ function getCacheData(): FortyGuardHeatmapResult | null {
 }
 
 function saveCacheData(data: FortyGuardHeatmapResult) {
-  const cacheDir = getCacheDir();
-  const cacheFile = getCacheFile();
-  if (!cacheDir || !cacheFile || !isNodeServer()) return;
   try {
+    const cacheDir = getCacheDir();
+    const cacheFile = getCacheFile();
+    if (!cacheDir || !cacheFile || !isNodeServer()) return;
     if (!fs.existsSync(cacheDir)) {
       fs.mkdirSync(cacheDir, { recursive: true });
     }
     fs.writeFileSync(cacheFile, JSON.stringify(data, null, 2), "utf-8");
   } catch (err) {
-    console.warn("[FortyGuard Service] Failed to write cache file:", err);
+    // Non-fatal: gracefully skip cache write on read-only / serverless environment
+    console.warn("[FortyGuard Service] Failed to write cache file (skipping cache):", err);
   }
 }
 
@@ -574,16 +588,17 @@ function getSlotCache(key: string): TemperatureTile[] | null {
 }
 
 function saveSlotCache(key: string, tiles: TemperatureTile[]) {
-  const cacheDir = getCacheDir();
-  if (!cacheDir || !isNodeServer()) return;
   try {
+    const cacheDir = getCacheDir();
+    if (!cacheDir || !isNodeServer()) return;
     if (!fs.existsSync(cacheDir)) {
       fs.mkdirSync(cacheDir, { recursive: true });
     }
     const file = path.join(cacheDir, `${FORECAST_CACHE_PREFIX}${key}.json`);
     fs.writeFileSync(file, JSON.stringify(tiles, null, 2), "utf-8");
   } catch (err) {
-    console.warn(`[FortyGuard Service] Slot cache write failed for ${key}:`, err);
+    // Non-fatal: gracefully skip cache write on read-only / serverless environment
+    console.warn(`[FortyGuard Service] Slot cache write failed for ${key} (skipping cache):`, err);
   }
 }
 

@@ -122,11 +122,17 @@ export const getWalkingRoutes = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }): Promise<DirectionsResult> => {
     let apiKey =
-      process.env.OPENROUTESERVICE_API_KEY ||
-      process.env.ORS_API_KEY ||
-      process.env.VITE_OPENROUTESERVICE_API_KEY;
+      (typeof process !== "undefined" && process.env
+        ? process.env.OPENROUTESERVICE_API_KEY ||
+          process.env.ORS_API_KEY ||
+          process.env.VITE_OPENROUTESERVICE_API_KEY
+        : undefined) ||
+      (typeof import.meta !== "undefined" && import.meta.env
+        ? (import.meta.env.VITE_OPENROUTESERVICE_API_KEY as string | undefined) ||
+          (import.meta.env.OPENROUTESERVICE_API_KEY as string | undefined)
+        : undefined);
 
-    if (!apiKey) {
+    if (!apiKey && typeof process !== "undefined" && typeof process.cwd === "function") {
       try {
         const fs = await import("node:fs");
         const path = await import("node:path");

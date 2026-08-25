@@ -1,7 +1,7 @@
 import { c as createServerFn } from "./createServerFn-CIHAFgYl.mjs";
 import { a as stringType, i as objectType, o as tupleType, r as numberType } from "../_libs/zod.mjs";
 import { t as createServerRpc } from "./createServerRpc-B90ckaqP.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/geocoding-CqZE6-sL.js
+//#region node_modules/.nitro/vite/services/ssr/assets/geocoding-C1HBqxwO.js
 var PHOENIX_FALLBACK_SUGGESTIONS = [
 	{
 		id: "encanto-park",
@@ -116,8 +116,21 @@ var searchPlaces = createServerFn({ method: "POST" }).validator(objectType({
 	text: stringType().min(1),
 	focusPoint: tupleType([numberType(), numberType()]).optional()
 })).handler(searchPlaces_createServerFn_handler, async ({ data }) => {
-	let apiKey = process.env.OPENROUTESERVICE_API_KEY || process.env.ORS_API_KEY || process.env.VITE_OPENROUTESERVICE_API_KEY;
-	if (!apiKey) try {
+	let apiKey = (typeof process !== "undefined" && process.env ? process.env.OPENROUTESERVICE_API_KEY || process.env.ORS_API_KEY || process.env.VITE_OPENROUTESERVICE_API_KEY : void 0) || (typeof import.meta !== "undefined" && {
+		"BASE_URL": "/",
+		"DEV": false,
+		"MODE": "production",
+		"PROD": true,
+		"SSR": true,
+		"TSS_DEV_SERVER": "false",
+		"TSS_DEV_SSR_STYLES_BASEPATH": "/",
+		"TSS_DEV_SSR_STYLES_ENABLED": "true",
+		"TSS_DISABLE_CSRF_MIDDLEWARE_WARNING": "false",
+		"TSS_INLINE_CSS_ENABLED": "false",
+		"TSS_ROUTER_BASEPATH": "",
+		"TSS_SERVER_FN_BASE": "/_serverFn/"
+	} ? void 0 : void 0);
+	if (!apiKey && typeof process !== "undefined" && typeof process.cwd === "function") try {
 		const fs = await import("node:fs");
 		const envPath = (await import("node:path")).resolve(process.cwd(), ".env");
 		if (fs.existsSync(envPath)) {

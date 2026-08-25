@@ -2,9 +2,9 @@ import { i as __toESM } from "../_runtime.mjs";
 import { c as HeadContent, d as Outlet, f as lazyRouteComponent, g as useRouter, h as Link, m as createRootRouteWithContext, p as createFileRoute, s as Scripts, u as createRouter } from "../_libs/@tanstack/react-router+[...].mjs";
 import { S as require_react } from "../_libs/@react-leaflet/core+[...].mjs";
 import { n as require_jsx_runtime, t as QueryClientProvider } from "../_libs/react+tanstack__react-query.mjs";
-import { t as Route$3 } from "./app-CYyIEtWn.mjs";
+import { t as Route$3 } from "./app-dTxmJUOj.mjs";
 import { t as QueryClient } from "../_libs/tanstack__query-core.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/router-ChLYO8kG.js
+//#region node_modules/.nitro/vite/services/ssr/assets/router-IIubZoyS.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 var styles_default = "/assets/styles-DsuH0kVR.css";
@@ -196,7 +196,7 @@ var Route$1 = createFileRoute("/")({
 	] }),
 	component: lazyRouteComponent($$splitComponentImporter$1, "component")
 });
-var $$splitComponentImporter = () => import("./heat-intelligence-BUiF9TBS.mjs");
+var $$splitComponentImporter = () => import("./heat-intelligence-CA4w_gma.mjs");
 var Route = createFileRoute("/heat-intelligence")({
 	head: () => ({ meta: [
 		{ title: "Heat Intelligence — HeatRoute" },
